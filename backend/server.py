@@ -271,6 +271,325 @@ async def create_or_update_aide(aide: AideAgricole):
         await db.aides.insert_one(aide_dict)
         return {"message": "Aide créée", "aid_id": aide.aid_id}
 
+@api_router.post("/seed")
+async def seed_database():
+    """Initialize database with sample agricultural aids"""
+    
+    # Check if already seeded
+    existing_count = await db.aides.count_documents({})
+    if existing_count > 0:
+        return {
+            "message": "Database already contains aids",
+            "existing_aids": existing_count,
+            "action": "skipped"
+        }
+    
+    # Sample aids data
+    sample_aids = [
+        {
+            "aid_id": "aide-001",
+            "titre": "Aide à la Conversion Bio",
+            "organisme": "Agence Bio",
+            "programme": "Conversion Agriculture Biologique 2024",
+            "source_url": "https://www.agencebio.org/aides",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Céréales", "Maraîchage", "Viticulture", "Élevage"],
+            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
+            "labels": ["Agriculture Biologique"],
+            "montant_min_eur": 3500,
+            "montant_max_eur": 12000,
+            "date_ouverture": "2024-01-15",
+            "date_limite": "2024-12-31",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$productions", ["Céréales", "Maraîchage", "Viticulture", "Élevage"]]},
+                    {">=": ["$superficie_ha", 5]}
+                ]
+            },
+            "criteres_mous_tags": ["bio", "conversion", "agriculture durable"],
+            "conditions_clefs": "Engagement conversion bio sur 5 ans minimum",
+            "lien_officiel": "https://www.agencebio.org/conversion",
+            "confiance": 0.95,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-002",
+            "titre": "Dotation Jeunes Agriculteurs (DJA)",
+            "organisme": "Ministère Agriculture",
+            "programme": "Installation Jeunes Agriculteurs 2024",
+            "source_url": "https://agriculture.gouv.fr/dja",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Tous types"],
+            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
+            "labels": [],
+            "montant_min_eur": 8000,
+            "montant_max_eur": 36000,
+            "date_ouverture": "2024-01-01",
+            "date_limite": "2024-12-31",
+            "criteres_durs_expr": {
+                "and": [
+                    {"<=": ["$age", 40]},
+                    {"==": ["$jeune_agriculteur", True]}
+                ]
+            },
+            "criteres_mous_tags": ["installation", "jeune", "reprise exploitation"],
+            "conditions_clefs": "Moins de 40 ans, diplôme agricole requis",
+            "lien_officiel": "https://agriculture.gouv.fr/jeunes-agriculteurs",
+            "confiance": 1.0,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-003",
+            "titre": "Aide à l'Irrigation Économe en Eau",
+            "organisme": "Agence de l'Eau",
+            "programme": "Gestion Durable de l'Eau Agricole",
+            "source_url": "https://www.lesagencesdeleau.fr",
+            "regions": ["Nouvelle-Aquitaine", "Occitanie", "PACA"],
+            "departements": [],
+            "productions": ["Maraîchage", "Arboriculture"],
+            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
+            "labels": [],
+            "taux_min_pct": 30,
+            "taux_max_pct": 50,
+            "plafond_eur": 30000,
+            "date_ouverture": "2024-03-01",
+            "date_limite": "2024-09-30",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$region", ["Nouvelle-Aquitaine", "Occitanie", "PACA"]]},
+                    {"in": ["$productions", ["Maraîchage", "Arboriculture"]]}
+                ]
+            },
+            "criteres_mous_tags": ["irrigation", "économie eau", "goutte-à-goutte"],
+            "conditions_clefs": "Installation système irrigation goutte-à-goutte",
+            "lien_officiel": "https://www.lesagencesdeleau.fr/irrigation",
+            "confiance": 0.88,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-004",
+            "titre": "Certification HVE (Haute Valeur Environnementale)",
+            "organisme": "Ministère Agriculture",
+            "programme": "Transition Agroécologique",
+            "source_url": "https://agriculture.gouv.fr/hve",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Viticulture", "Grandes cultures", "Arboriculture"],
+            "statuts": ["EARL", "SCEA", "Exploitation individuelle", "GAEC"],
+            "labels": ["HVE"],
+            "montant_min_eur": 2500,
+            "montant_max_eur": 8000,
+            "date_ouverture": "2024-01-01",
+            "date_limite": "2024-11-30",
+            "criteres_durs_expr": {
+                "in": ["$productions", ["Viticulture", "Grandes cultures", "Arboriculture"]]
+            },
+            "criteres_mous_tags": ["environnement", "biodiversité", "certification"],
+            "conditions_clefs": "Audit environnemental et plan d'amélioration requis",
+            "lien_officiel": "https://agriculture.gouv.fr/certification-hve",
+            "confiance": 0.92,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-005",
+            "titre": "Aide Robotisation et Numérique Agricole",
+            "organisme": "FranceAgriMer",
+            "programme": "Agriculture 4.0",
+            "source_url": "https://www.franceagrimer.fr",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Élevage laitier", "Grandes cultures"],
+            "statuts": ["EARL", "GAEC", "SCEA"],
+            "labels": [],
+            "taux_min_pct": 20,
+            "taux_max_pct": 40,
+            "plafond_eur": 50000,
+            "date_ouverture": "2024-02-01",
+            "date_limite": "2024-10-31",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$productions", ["Élevage laitier", "Grandes cultures"]]},
+                    {">=": ["$superficie_ha", 30]}
+                ]
+            },
+            "criteres_mous_tags": ["robot", "numérique", "automatisation", "précision"],
+            "conditions_clefs": "Investissement dans robots de traite ou outils de précision",
+            "lien_officiel": "https://www.franceagrimer.fr/robotique",
+            "confiance": 0.85,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-006",
+            "titre": "Aide au Bien-être Animal",
+            "organisme": "Région Bretagne",
+            "programme": "Élevage Responsable 2024",
+            "source_url": "https://www.bretagne.bzh/agriculture",
+            "regions": ["Bretagne"],
+            "departements": ["22", "29", "35", "56"],
+            "productions": ["Élevage porcin", "Élevage bovin", "Élevage avicole"],
+            "statuts": ["EARL", "GAEC", "SCEA"],
+            "labels": [],
+            "taux_min_pct": 25,
+            "taux_max_pct": 40,
+            "plafond_eur": 20000,
+            "date_ouverture": "2024-01-15",
+            "date_limite": "2024-06-30",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$region", ["Bretagne"]]},
+                    {"in": ["$productions", ["Élevage porcin", "Élevage bovin", "Élevage avicole"]]}
+                ]
+            },
+            "criteres_mous_tags": ["bien-être animal", "bâtiment", "aménagement"],
+            "conditions_clefs": "Aménagement bâtiments d'élevage pour bien-être animal",
+            "lien_officiel": "https://www.bretagne.bzh/bien-etre-animal",
+            "confiance": 0.90,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-007",
+            "titre": "Aide à l'Agroforesterie",
+            "organisme": "Région Nouvelle-Aquitaine",
+            "programme": "Plantation Agroforesterie 2024",
+            "source_url": "https://les-aides.nouvelle-aquitaine.fr",
+            "regions": ["Nouvelle-Aquitaine"],
+            "departements": [],
+            "productions": ["Grandes cultures", "Élevage", "Viticulture"],
+            "statuts": ["Exploitation individuelle", "EARL", "GAEC", "SCEA"],
+            "labels": [],
+            "montant_min_eur": 5000,
+            "montant_max_eur": 15000,
+            "date_ouverture": "2024-02-01",
+            "date_limite": "2024-05-31",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$region", ["Nouvelle-Aquitaine"]]},
+                    {">=": ["$superficie_ha", 10]}
+                ]
+            },
+            "criteres_mous_tags": ["agroforesterie", "arbre", "haie", "biodiversité"],
+            "conditions_clefs": "Plantation minimum 100 arbres/ha",
+            "lien_officiel": "https://les-aides.nouvelle-aquitaine.fr/agroforesterie",
+            "confiance": 0.87,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-008",
+            "titre": "Aide Méthanisation Collective",
+            "organisme": "ADEME",
+            "programme": "Énergie Renouvelable Agricole",
+            "source_url": "https://www.ademe.fr",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Élevage"],
+            "statuts": ["GAEC", "CUMA", "Coopérative"],
+            "labels": [],
+            "taux_min_pct": 30,
+            "taux_max_pct": 55,
+            "plafond_eur": 200000,
+            "date_ouverture": "2024-01-01",
+            "date_limite": "2024-12-31",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$productions", ["Élevage"]]},
+                    {"in": ["$statut", ["GAEC", "CUMA", "Coopérative"]]}
+                ]
+            },
+            "criteres_mous_tags": ["méthanisation", "énergie", "biogaz", "collectif"],
+            "conditions_clefs": "Projet collectif minimum 3 exploitations",
+            "lien_officiel": "https://www.ademe.fr/methanisation",
+            "confiance": 0.83,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-009",
+            "titre": "Aide Développement Circuits Courts",
+            "organisme": "Chambre d'Agriculture",
+            "programme": "Vente Directe 2024",
+            "source_url": "https://chambres-agriculture.fr",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Maraîchage", "Élevage", "Viticulture", "Arboriculture"],
+            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
+            "labels": [],
+            "montant_min_eur": 3000,
+            "montant_max_eur": 10000,
+            "date_ouverture": "2024-01-15",
+            "date_limite": "2024-08-31",
+            "criteres_durs_expr": {
+                "in": ["$productions", ["Maraîchage", "Élevage", "Viticulture", "Arboriculture"]]
+            },
+            "criteres_mous_tags": ["circuit court", "vente directe", "magasin", "marché"],
+            "conditions_clefs": "Création point de vente ou aménagement pour circuits courts",
+            "lien_officiel": "https://chambres-agriculture.fr/circuits-courts",
+            "confiance": 0.91,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-010",
+            "titre": "Aide Modernisation des Serres",
+            "organisme": "FranceAgriMer",
+            "programme": "Horticulture Durable",
+            "source_url": "https://www.franceagrimer.fr",
+            "regions": ["National"],
+            "departements": [],
+            "productions": ["Maraîchage", "Horticulture"],
+            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
+            "labels": [],
+            "taux_min_pct": 25,
+            "taux_max_pct": 40,
+            "plafond_eur": 40000,
+            "date_ouverture": "2024-03-01",
+            "date_limite": "2024-09-30",
+            "criteres_durs_expr": {
+                "and": [
+                    {"in": ["$productions", ["Maraîchage", "Horticulture"]]},
+                    {">=": ["$superficie_ha", 0.5]}
+                ]
+            },
+            "criteres_mous_tags": ["serre", "économie énergie", "isolation", "chauffage"],
+            "conditions_clefs": "Travaux isolation ou système chauffage économe",
+            "lien_officiel": "https://www.franceagrimer.fr/serres",
+            "confiance": 0.86,
+            "expiree": False
+        },
+        {
+            "aid_id": "aide-011",
+            "titre": "Aide à la Diversification Agricole",
+            "organisme": "Région Auvergne-Rhône-Alpes",
+            "programme": "Diversification Activités 2024",
+            "source_url": "https://www.auvergnerhonealpes.fr",
+            "regions": ["Auvergne-Rhône-Alpes"],
+            "departements": [],
+            "productions": ["Tous types"],
+            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
+            "labels": [],
+            "taux_min_pct": 30,
+            "taux_max_pct": 50,
+            "plafond_eur": 25000,
+            "date_ouverture": "2024-02-01",
+            "date_limite": "2024-11-30",
+            "criteres_durs_expr": {
+                "in": ["$region", ["Auvergne-Rhône-Alpes"]]
+            },
+            "criteres_mous_tags": ["diversification", "agrotourisme", "transformation", "vente"],
+            "conditions_clefs": "Création activité complémentaire (agrotourisme, transformation...)",
+            "lien_officiel": "https://www.auvergnerhonealpes.fr/diversification",
+            "confiance": 0.84,
+            "expiree": False
+        }
+    ]
+    
+    # Insert aids
+    result = await db.aides.insert_many(sample_aids)
+    
+    return {
+        "message": "Database seeded successfully with agricultural aids",
+        "aids_created": len(result.inserted_ids),
+        "aids": sample_aids
+    }
 @api_router.post("/assistant")
 async def assistant_ia(request: AssistantRequest):
     return {"reponse": "Assistant IA non disponible dans cette version. Utilisez le formulaire pour trouver vos aides."}
