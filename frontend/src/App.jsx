@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE_URL = 'https://your-api-url/api'; // Replace with your actual API URL
+const API_BASE_URL = 'https://your-api-url/api';
 
 function App() {
     const [formData, setFormData] = useState({
@@ -10,12 +10,10 @@ function App() {
         departement: '',
         statut_juridique: '',
         superficie_ha: '',
-        productions: [],
-        labels: [],
-        projets: [],
         age_exploitant: '',
         jeune_agriculteur: false,
     });
+    
     const [results, setResults] = useState({
         aidesEligibles: [],
         loading: false,
@@ -32,41 +30,212 @@ function App() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setResults({ ...results, loading: true, error: '' });
+        setResults({ aidesEligibles: [], loading: true, error: '' });
+        
         try {
             const response = await axios.post(`${API_BASE_URL}/eligibilite`, formData);
-            setResults({ ...results, aidesEligibles: response.data, loading: false });
+            setResults({ aidesEligibles: response.data, loading: false, error: '' });
         } catch (error) {
-            setResults({ ...results, loading: false, error: error.message });
+            setResults({ aidesEligibles: [], loading: false, error: error.message });
         }
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">AgriSubv Application</h1>
-            <form onSubmit={handleSubmit} className="mb-4">
-                <select name="region" onChange={handleChange} className="mb-2">
-                    <option value="">Select Region</option>
-                    {/* Add options here */}
-                </select>
-                <input type="number" name="superficie_ha" value={formData.superficie_ha} onChange={handleChange} placeholder="Superficie (ha)" className="mb-2" />
-                {/* Other input fields for departement, statut_juridique, etc. */}
-                <button type="submit" className="btn bg-blue-500 text-white px-4 py-2">Check Aides</button>
-            </form>
-            <div>
-                {results.loading && <p>Loading...</p>}
-                {results.error && <p className="text-red-500">Error: {results.error}</p>}
-                <ul className="results-list">
-                    {results.aidesEligibles.map((aide, index) => (
-                        <li key={index} className="mb-2">
-                            <h2 className="font-semibold">{aide.title} (Score: {aide.score})</h2>
-                            <p>Organisme: {aide.organisme}</p>
-                            <p>Montant: {aide.montant}</p>
-                            <p>Conditions: {aide.conditions}</p>
-                        </li>
-                    ))}
-                </ul>
-            </div>
+        <div className="app">
+            {/* Header */}
+            <header className="app-header">
+                <div className="header-content">
+                    <h1 className="app-title">🌾 AgriSubv</h1>
+                    <p className="app-subtitle">Plateforme d'aide aux subventions agricoles</p>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="app-main">
+                <div className="content-wrapper">
+                    
+                    {/* Form Card */}
+                    <section className="card form-card">
+                        <h2 className="section-title">Informations sur votre exploitation</h2>
+                        
+                        <form onSubmit={handleSubmit} className="form">
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Région *</label>
+                                    <select 
+                                        name="region" 
+                                        value={formData.region}
+                                        onChange={handleChange}
+                                        className="form-input"
+                                        required
+                                    >
+                                        <option value="">Sélectionnez votre région</option>
+                                        {/* Options will be populated from backend */}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Département</label>
+                                    <input 
+                                        type="text" 
+                                        name="departement"
+                                        value={formData.departement}
+                                        onChange={handleChange}
+                                        placeholder="Ex: 01, 75, 69..."
+                                        className="form-input"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Statut juridique *</label>
+                                    <select 
+                                        name="statut_juridique"
+                                        value={formData.statut_juridique}
+                                        onChange={handleChange}
+                                        className="form-input"
+                                        required
+                                    >
+                                        <option value="">Sélectionnez votre statut</option>
+                                        {/* Options will be populated from backend */}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Superficie (hectares) *</label>
+                                    <input 
+                                        type="number" 
+                                        name="superficie_ha"
+                                        value={formData.superficie_ha}
+                                        onChange={handleChange}
+                                        placeholder="Ex: 50"
+                                        min="0"
+                                        className="form-input"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Âge de l'exploitant</label>
+                                    <input 
+                                        type="number" 
+                                        name="age_exploitant"
+                                        value={formData.age_exploitant}
+                                        onChange={handleChange}
+                                        placeholder="Ex: 35"
+                                        min="18"
+                                        max="100"
+                                        className="form-input"
+                                    />
+                                </div>
+
+                                <div className="form-group checkbox-wrapper">
+                                    <label className="checkbox-label">
+                                        <input 
+                                            type="checkbox" 
+                                            name="jeune_agriculteur"
+                                            checked={formData.jeune_agriculteur}
+                                            onChange={handleChange}
+                                            className="checkbox-input"
+                                        />
+                                        <span>Jeune agriculteur (première installation)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary"
+                                disabled={results.loading}
+                            >
+                                {results.loading ? (
+                                    <>
+                                        <span className="spinner"></span>
+                                        Recherche en cours...
+                                    </>
+                                ) : (
+                                    '🔍 Rechercher les aides disponibles'
+                                )}
+                            </button>
+                        </form>
+                    </section>
+
+                    {/* Loading State */}
+                    {results.loading && (
+                        <div className="loading-state">
+                            <div className="loading-spinner"></div>
+                            <p>Analyse de votre profil en cours...</p>
+                        </div>
+                    )}
+
+                    {/* Error State */}
+                    {results.error && (
+                        <div className="alert alert-error">
+                            <span className="alert-icon">⚠️</span>
+                            <div>
+                                <strong>Erreur</strong>
+                                <p>{results.error}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Results Section */}
+                    {results.aidesEligibles.length > 0 && (
+                        <section className="results-section">
+                            <h2 className="section-title">
+                                Résultats ({results.aidesEligibles.length} aide(s) trouvée(s))
+                            </h2>
+                            
+                            <div className="results-grid">
+                                {results.aidesEligibles.map((aide, index) => (
+                                    <article key={index} className="card aide-card">
+                                        <div className="aide-header">
+                                            <h3 className="aide-title">{aide.title}</h3>
+                                            {aide.score && (
+                                                <span className="badge badge-score">{aide.score}%</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="aide-body">
+                                            {aide.organisme && (
+                                                <p className="aide-info">
+                                                    <strong>Organisme:</strong> {aide.organisme}
+                                                </p>
+                                            )}
+                                            {aide.montant && (
+                                                <p className="aide-info">
+                                                    <strong>Montant:</strong> {aide.montant}
+                                                </p>
+                                            )}
+                                            {aide.conditions && (
+                                                <p className="aide-info">
+                                                    <strong>Conditions:</strong> {aide.conditions}
+                                                </p>
+                                            )}
+                                        </div>
+                                        
+                                        {aide.eligible !== undefined && (
+                                            <div className="aide-footer">
+                                                <span className={`badge ${aide.eligible ? 'badge-success' : 'badge-error'}`}> 
+                                                    {aide.eligible ? '✓ Éligible' : '✗ Non éligible'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </article>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="app-footer">
+                <p>© 2025 AgriSubv - Plateforme d'aide aux subventions agricoles</p>
+            </footer>
         </div>
     );
 }
