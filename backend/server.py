@@ -529,23 +529,31 @@ async def run_migration_via_http():
                 'productions': safe_stats.get('productions', {}),
                 'projets': safe_stats.get('projets', {})
             }
+            # Extract and sanitize all numeric values to prevent any object leakage
+            total_old = int(result.get('total_old', 0))
+            total_fake = int(result.get('total_fake', 0))
+            fake_deleted = int(result.get('fake_deleted', 0))
+            total_real = int(result.get('total_real', 0))
+            total_migrated = int(result.get('total_migrated', 0))
+            errors_count = int(result.get('errors', 0))
+            
             return {
                 "status": "success",
                 "message": "Migration V2 terminée avec succès",
                 "migration_results": {
-                    "total_old": result['total_old'],
-                    "total_fake": result['total_fake'],
-                    "fake_deleted": result['fake_deleted'],
-                    "total_real": result['total_real'],
-                    "total_migrated": result['total_migrated'],
-                    "errors": result['errors'],
+                    "total_old": total_old,
+                    "total_fake": total_fake,
+                    "fake_deleted": fake_deleted,
+                    "total_real": total_real,
+                    "total_migrated": total_migrated,
+                    "errors": errors_count,
                     "stats": sanitized_stats
                 },
                 "summary": {
-                    "aides_before": result['total_old'],
-                    "aides_after": result['total_real'],
-                    "aides_v2_created": result['total_migrated'],
-                    "fake_aids_removed": result['fake_deleted']
+                    "aides_before": total_old,
+                    "aides_after": total_real,
+                    "aides_v2_created": total_migrated,
+                    "fake_aids_removed": fake_deleted
                 }
             }
         else:
