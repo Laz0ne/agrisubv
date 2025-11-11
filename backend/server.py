@@ -201,29 +201,83 @@ async def health():
 @api_router.get("/aides", response_model=List[AideAgricole])
 async def get_aides(
     region: Optional[str] = None,
+    departement: Optional[str] = None,
     production: Optional[str] = None,
+    projet: Optional[str] = None,
     statut: Optional[str] = None,
     label: Optional[str] = None,
-    mot_cle: Optional[str] = None,
+    montant_min: Optional[float] = None,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    include_expired: bool = False,
+    skip: int = 0,
     limit: int = 100
 ):
-    query = {"expiree": False}
+    """
+    Récupère les aides avec filtres avancés
     
+    Paramètres:
+    - region: Filtrer par région
+    - departement: Filtrer par département
+    - production: Filtrer par type de production
+    - projet: Filtrer par type de projet
+    - statut: Filtrer par statut juridique
+    - label: Filtrer par label
+    - montant_min: Montant minimum de l'aide
+    - source: Filtrer par source (manual, aides_territoires, datagouv_pac)
+    - q: Recherche textuelle dans titre et description
+    - include_expired: Inclure les aides expirées
+    - skip: Nombre d'aides à sauter (pagination)
+    - limit: Nombre maximum d'aides à retourner
+    """
+    query = {}
+    
+    # Filtrer les aides expirées sauf si demandé explicitement
+    if not include_expired:
+        query["expiree"] = False
+    
+    # Filtres géographiques
     if region:
         query["regions"] = {"$in": [region, "National"]}
+    if departement:
+        query["departements"] = departement
+    
+    # Filtres de production et projets
     if production:
         query["productions"] = production
+    if projet:
+        query["criteres_mous_tags"] = {"$regex": projet, "$options": "i"}
+    
+    # Filtres statut et labels
     if statut:
         query["statuts"] = statut
     if label:
         query["labels"] = label
-    if mot_cle:
+    
+    # Filtre montant minimum
+    if montant_min is not None:
         query["$or"] = [
-            {"titre": {"$regex": mot_cle, "$options": "i"}},
-            {"conditions_clefs": {"$regex": mot_cle, "$options": "i"}}
+            {"montant_max_eur": {"$gte": montant_min}},
+            {"montant_min_eur": {"$gte": montant_min}}
         ]
     
-    aides_cursor = db.aides.find(query).limit(limit)
+    # Filtre source
+    if source:
+        query["source"] = source
+    
+    # Recherche textuelle
+    if q:
+        query["$or"] = [
+            {"titre": {"$regex": q, "$options": "i"}},
+            {"conditions_clefs": {"$regex": q, "$options": "i"}},
+            {"programme": {"$regex": q, "$options": "i"}}
+        ]
+    
+    # Comptage total pour pagination
+    total = await db.aides.count_documents(query)
+    
+    # Récupération avec pagination
+    aides_cursor = db.aides.find(query).skip(skip).limit(limit)
     aides = await aides_cursor.to_list(length=limit)
     
     return [AideAgricole(**aide) for aide in aides]
@@ -631,26 +685,46 @@ async def sync_aides_territoires(limit: Optional[int] = None):
 
 @api_router.get("/sync/status")
 async def get_sync_status():
-    """Retourne le statut de la base de données"""
+    """Retourne le statut de la base de données avec comptage par source et statut"""
     
-    total_aides = await db.aides.count_documents({})
-    aides_at = await db.aides.count_documents({"source": "aides-territoires"})
-    aides_manuelles = await db.aides.count_documents({"source": {"$ne": "aides-territoires"}})
-    aides_actives = await db.aides.count_documents({"expiree": False})
-    
-    derniere_aide = await db.aides.find_one(
-        {"source": "aides-territoires"},
-        sort=[("derniere_maj", -1)]
-    )
-    derniere_maj = derniere_aide.get('derniere_maj') if derniere_aide else None
-    
-    return {
-        "total_aides": total_aides,
-        "aides_aides_territoires": aides_at,
-        "aides_manuelles": aides_manuelles,
-        "aides_actives": aides_actives,
-        "derniere_synchronisation": derniere_maj
-    }
+    try:
+        # Comptage total
+        total_aides = await db.aides.count_documents({})
+        
+        # Comptage par source
+        aides_manual = await db.aides.count_documents({"source": "manual"})
+        aides_at = await db.aides.count_documents({"source": "aides-territoires"})
+        aides_pac = await db.aides.count_documents({"source": "datagouv-pac"})
+        # Aides sans source définie (anciennes)
+        aides_no_source = await db.aides.count_documents({"source": {"$exists": False}})
+        
+        # Comptage par statut
+        aides_actives = await db.aides.count_documents({"expiree": False})
+        aides_inactives = await db.aides.count_documents({"expiree": True})
+        
+        # Dernière synchronisation
+        derniere_aide = await db.aides.find_one(
+            {"source": {"$in": ["aides-territoires", "datagouv-pac"]}},
+            sort=[("derniere_maj", -1)]
+        )
+        derniere_maj = derniere_aide.get('derniere_maj') if derniere_aide else None
+        
+        return {
+            "total_aides": total_aides,
+            "by_source": {
+                "manual": aides_manual + aides_no_source,
+                "aides_territoires": aides_at,
+                "datagouv_pac": aides_pac
+            },
+            "by_status": {
+                "active": aides_actives,
+                "inactive": aides_inactives
+            },
+            "derniere_synchronisation": derniere_maj
+        }
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du statut: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération du statut: {str(e)}")
 
 # ============ SYNC DATA.GOUV.FR PAC ============
 
@@ -670,6 +744,30 @@ async def sync_datagouv_pac(limit: Optional[int] = None):
     except Exception as e:
         logger.error(f"Erreur lors de la synchronisation PAC : {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============ SYNC AIDES-TERRITOIRES V2 ============
+
+from sync_aides_territoires_v2 import sync_aides_territoires_v2
+
+@api_router.post("/sync/aides-territoires-v2")
+async def sync_aides_territoires_v2_endpoint(
+    max_pages: Optional[int] = None,
+    background_tasks = None
+):
+    """
+    Synchronise les aides depuis Aides-Territoires vers le modèle V2
+    
+    Paramètres:
+    - max_pages: Nombre maximum de pages à synchroniser (optionnel, pour tests)
+    """
+    try:
+        # Lancer la synchronisation
+        result = await sync_aides_territoires_v2(db, max_pages=max_pages)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur lors de la synchronisation V2 : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -685,6 +783,53 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def create_indexes():
+    """Crée les index MongoDB optimisés au démarrage"""
+    try:
+        logger.info("🔧 Création des index MongoDB...")
+        
+        # Index texte pour recherche full-text sur titre et description
+        await db.aides.create_index([
+            ("titre", "text"),
+            ("conditions_clefs", "text")
+        ], name="text_search_index")
+        logger.info("   ✅ Index texte créé")
+        
+        # Index sur les régions
+        await db.aides.create_index("regions", name="regions_index")
+        logger.info("   ✅ Index régions créé")
+        
+        # Index sur source et statut
+        await db.aides.create_index("source", name="source_index")
+        await db.aides.create_index("expiree", name="expiree_index")
+        logger.info("   ✅ Index source et statut créés")
+        
+        # Index sur date_fin pour gérer les expirations
+        await db.aides.create_index("date_limite", name="date_limite_index")
+        logger.info("   ✅ Index date_limite créé")
+        
+        # Index sur productions et tags
+        await db.aides.create_index("productions", name="productions_index")
+        await db.aides.create_index("criteres_mous_tags", name="tags_index")
+        logger.info("   ✅ Index productions et tags créés")
+        
+        # Index pour la collection V2
+        await db.aides_v2.create_index([
+            ("titre", "text"),
+            ("description", "text")
+        ], name="v2_text_search_index")
+        await db.aides_v2.create_index("criteres.regions", name="v2_regions_index")
+        await db.aides_v2.create_index("source", name="v2_source_index")
+        await db.aides_v2.create_index("statut", name="v2_statut_index")
+        await db.aides_v2.create_index("criteres.types_production", name="v2_productions_index")
+        await db.aides_v2.create_index("criteres.types_projets", name="v2_projets_index")
+        logger.info("   ✅ Index V2 créés")
+        
+        logger.info("✅ Tous les index MongoDB ont été créés avec succès")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la création des index: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
