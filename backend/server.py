@@ -633,6 +633,25 @@ async def sync_aides_territoires(limit: Optional[int] = None):
 async def get_sync_status():
     """Retourne le statut de la base de données"""
     
+    # ============ SYNC DATA.GOUV.FR PAC ============
+
+from sync_datagouv_pac import sync_pac_to_db
+
+@api_router.post("/sync/datagouv-pac")
+async def sync_datagouv_pac(limit: Optional[int] = None):
+    """
+    Synchronise les aides PAC depuis Data.gouv.fr
+    
+    Paramètres:
+    - limit: Nombre maximum d'aides à synchroniser (optionnel)
+    """
+    try:
+        result = await sync_pac_to_db(db, limit=limit)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur lors de la synchronisation PAC : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
     total_aides = await db.aides.count_documents({})
     aides_at = await db.aides.count_documents({"source": "aides-territoires"})
     aides_manuelles = await db.aides.count_documents({"source": {"$ne": "aides-territoires"}})
