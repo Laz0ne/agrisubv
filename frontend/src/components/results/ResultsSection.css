@@ -1,0 +1,231 @@
+/* ResultsSection Styles - AgriSubv V2 */
+
+.results-container {
+  max-width: 1200px;
+  margin: var(--spacing-3xl) auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.results-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.results-title {
+  font-size: var(--text-4xl);
+  font-weight: 800;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-sm);
+}
+
+.results-subtitle {
+  font-size: var(--text-lg);
+  color: var(--gray-600);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-3xl);
+}
+
+.stat-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  transition: all var(--transition-base);
+  border: 2px solid transparent;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.stat-card.green {
+  border-color: var(--primary-green);
+}
+
+.stat-card.yellow {
+  border-color: #fbbf24;
+}
+
+.stat-card.blue {
+  border-color: var(--accent-blue);
+}
+
+.stat-icon {
+  font-size: var(--text-4xl);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+/* Aides List */
+.aides-list {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.aide-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+  border: 2px solid transparent;
+}
+
+.aide-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-green);
+}
+
+.aide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.aide-rank {
+  background: var(--bg-gradient);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.aide-badge {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.aide-badge.green {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--primary-green-dark);
+}
+
+.aide-badge.yellow {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+}
+
+.aide-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-md);
+}
+
+/* Score Bar */
+.aide-score {
+  margin-bottom: var(--spacing-md);
+}
+
+.score-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--spacing-xs);
+}
+
+.score-bar-fill {
+  height: 100%;
+  background: var(--bg-gradient);
+  border-radius: var(--radius-full);
+  transition: width 1s ease;
+}
+
+.score-value {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  font-weight: 600;
+}
+
+.aide-montant {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--primary-green);
+  margin-bottom: var(--spacing-md);
+}
+
+.btn-details {
+  background: var(--primary-green);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-details:hover {
+  background: var(--primary-green-dark);
+  transform: translateX(4px);
+}
+
+/* Empty & No Results */
+.results-empty,
+.no-results {
+  text-align: center;
+  padding: var(--spacing-3xl);
+}
+
+.empty-icon,
+.no-results-icon {
+  font-size: 80px;
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+.no-results h3 {
+  font-size: var(--text-2xl);
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+}
+
+.no-results p {
+  color: var(--gray-600);
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .results-title {
+    font-size: var(--text-2xl);
+  }
+}
