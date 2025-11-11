@@ -470,7 +470,6 @@ async def test_matching_endpoint():
         return {
             "status": "error",
             "matching_engine": "import_error",
-            "error": str(e),
             "message": "❌ Erreur lors du chargement du matching engine"
         }
     except Exception as e:
@@ -478,7 +477,6 @@ async def test_matching_endpoint():
         return {
             "status": "error",
             "matching_engine": "error",
-            "error": str(e),
             "message": "❌ Erreur lors du test du matching engine"
         }
 
