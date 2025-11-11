@@ -10,6 +10,10 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 
+# Imports pour matching V2
+from matching_engine import MatchingEngine
+from models_v2 import ProfilAgriculteur as ProfilAgriculteurV2, ResultatMatching, AideAgricoleV2
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -312,6 +316,169 @@ async def check_eligibilite(profil: ProfilAgriculteur):
         total_aides=len(resultats),
         total_eligibles=len(eligibles)
     )
+
+# ============ MATCHING V2 INTELLIGENT ============
+
+@api_router.post("/matching")
+async def calculate_matching_v2(profil: ProfilAgriculteurV2):
+    """
+    Matching intelligent V2 entre un profil agriculteur et toutes les aides V2
+    
+    Utilise le matching engine pour calculer un score de correspondance (0-100%)
+    pour chaque aide en fonction de critères pondérés :
+    - Localisation : 25%
+    - Production : 20%
+    - Projet : 15%
+    - Statut juridique : 10%
+    - Âge : 10%
+    - Surface/Cheptel : 10%
+    - Labels : 10%
+    
+    Args:
+        profil: Profil complet de l'agriculteur (ProfilAgriculteurV2)
+    
+    Returns:
+        {
+            "profil_id": str,
+            "total_aides": int,
+            "aides_eligibles": int,
+            "aides_quasi_eligibles": int,
+            "aides_non_eligibles": int,
+            "montant_total_estime_min": float,
+            "montant_total_estime_max": float,
+            "resultats": [ResultatMatching]
+        }
+    """
+    try:
+        logger.info(f"🎯 Matching V2 pour profil: {profil.region}, {profil.statut_juridique.value}")
+        
+        # Récupérer toutes les aides V2 actives
+        aides_cursor = db.aides_v2.find({"statut": "active"})
+        aides = await aides_cursor.to_list(length=5000)
+        
+        if not aides:
+            logger.warning("⚠️  Aucune aide V2 trouvée dans la base")
+            return {
+                "profil_id": profil.profil_id,
+                "total_aides": 0,
+                "aides_eligibles": 0,
+                "aides_quasi_eligibles": 0,
+                "aides_non_eligibles": 0,
+                "montant_total_estime_min": 0,
+                "montant_total_estime_max": 0,
+                "resultats": []
+            }
+        
+        logger.info(f"   📊 {len(aides)} aides V2 trouvées")
+        
+        # Créer le matching engine
+        engine = MatchingEngine()
+        
+        # Calculer le matching pour chaque aide
+        resultats = []
+        for aide_data in aides:
+            try:
+                # Convertir en objet AideAgricoleV2
+                aide = AideAgricoleV2(**aide_data)
+                
+                # Calculer le matching
+                resultat = engine.calculate_match(aide, profil)
+                resultats.append(resultat)
+                
+            except Exception as e:
+                logger.error(f"   ❌ Erreur matching aide {aide_data.get('aid_id')}: {e}")
+                continue
+        
+        # Trier par score décroissant (aides les plus pertinentes en premier)
+        resultats.sort(key=lambda x: (-x.eligible, -x.score))
+        
+        # Statistiques globales
+        aides_eligibles = [r for r in resultats if r.eligible]
+        aides_quasi_eligibles = [r for r in resultats if not r.eligible and r.score >= 40]
+        aides_non_eligibles = [r for r in resultats if r.score < 40]
+        
+        # Calcul du montant total estimé (uniquement aides éligibles)
+        montant_total_min = sum(
+            r.montant_estime_min or 0 
+            for r in aides_eligibles 
+            if r.montant_estime_min
+        )
+        montant_total_max = sum(
+            r.montant_estime_max or 0 
+            for r in aides_eligibles 
+            if r.montant_estime_max
+        )
+        
+        logger.info(f"   ✅ Matching terminé:")
+        logger.info(f"      - Éligibles: {len(aides_eligibles)}")
+        logger.info(f"      - Quasi-éligibles: {len(aides_quasi_eligibles)}")
+        logger.info(f"      - Non éligibles: {len(aides_non_eligibles)}")
+        if montant_total_min > 0 or montant_total_max > 0:
+            logger.info(f"      - Montant estimé: {montant_total_min:,.0f}€ - {montant_total_max:,.0f}€")
+        
+        return {
+            "profil_id": profil.profil_id,
+            "total_aides": len(resultats),
+            "aides_eligibles": len(aides_eligibles),
+            "aides_quasi_eligibles": len(aides_quasi_eligibles),
+            "aides_non_eligibles": len(aides_non_eligibles),
+            "montant_total_estime_min": round(montant_total_min, 2),
+            "montant_total_estime_max": round(montant_total_max, 2),
+            "resultats": [r.model_dump() for r in resultats]
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur lors du matching V2: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors du calcul du matching: {str(e)}"
+        )
+
+
+@api_router.get("/matching/test")
+async def test_matching_endpoint():
+    """
+    Endpoint de test pour vérifier que le matching engine fonctionne
+    
+    Returns:
+        {
+            "status": "ok" | "error",
+            "matching_engine": "loaded" | "error",
+            "aides_v2_count": int,
+            "message": str
+        }
+    """
+    try:
+        # Vérifier que le matching engine peut être importé
+        engine = MatchingEngine()
+        
+        # Compter les aides V2
+        count_v2 = await db.aides_v2.count_documents({})
+        count_active = await db.aides_v2.count_documents({"statut": "active"})
+        
+        return {
+            "status": "ok",
+            "matching_engine": "loaded",
+            "aides_v2_count": count_v2,
+            "aides_v2_active": count_active,
+            "message": "✅ Endpoint de matching V2 opérationnel"
+        }
+    except ImportError as e:
+        logger.error(f"Erreur import matching engine: {e}")
+        return {
+            "status": "error",
+            "matching_engine": "import_error",
+            "message": "❌ Erreur lors du chargement du matching engine"
+        }
+    except Exception as e:
+        logger.error(f"Erreur test matching: {e}")
+        return {
+            "status": "error",
+            "matching_engine": "error",
+            "message": "❌ Erreur lors du test du matching engine"
+        }
 
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
