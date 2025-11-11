@@ -78,6 +78,28 @@ class MigrationV2:
     def __init__(self, db):
         self.db = db
     
+    def is_fake_aide(self, aide: Dict[str, Any]) -> bool:
+        """
+        Détecte si une aide est factice (test)
+        Les 11 premières aides manuelles sont considérées comme factices
+        """
+        # Critère 1: Source manuelle
+        source = aide.get('source', 'manual')
+        if source != 'manual':
+            return False
+        
+        # Critère 2: Pas d'aid_id réel ou aid_id commençant par 'test_' ou 'fake_'
+        aid_id = aide.get('aid_id', '')
+        if aid_id.startswith('test_') or aid_id.startswith('fake_'):
+            return True
+        
+        # Critère 3: Titre contenant "test" ou "exemple"
+        titre = aide.get('titre', '').lower()
+        if 'test' in titre or 'exemple' in titre or 'factice' in titre:
+            return True
+        
+        return True  # Par défaut, les aides manuelles sans critères clairs sont considérées comme factices
+    
     def detect_productions(self, aide_old: Dict[str, Any]) -> List[TypeProduction]:
         """Détecte les types de production depuis l'ancienne aide"""
         productions = []
@@ -225,7 +247,7 @@ class MigrationV2:
         
         return aide_v2
     
-    async def migrate_all(self) -> Dict[str, Any]:
+    async def migrate_all(self, clean_fake_aids: bool = False) -> Dict[str, Any]:
         """Migre toutes les aides existantes vers V2"""
         
         logger.info("=" * 60)
@@ -247,18 +269,47 @@ class MigrationV2:
         for source, count in sources.items():
             logger.info(f"   - {source}: {count} aides")
         
-        # Migration
-        logger.info(f"\n🔄 Migration des aides...")
+        # Séparer les aides factices des aides réelles
+        aides_factices = []
+        aides_reelles = []
+        
+        for aide in aides_old:
+            if self.is_fake_aide(aide):
+                aides_factices.append(aide)
+            else:
+                aides_reelles.append(aide)
+        
+        logger.info(f"\n🔍 Analyse des aides:")
+        logger.info(f"   - Aides factices détectées: {len(aides_factices)}")
+        logger.info(f"   - Aides réelles (PAC): {len(aides_reelles)}")
+        
+        # Suppression des aides factices si demandé
+        fake_deleted_count = 0
+        if clean_fake_aids and aides_factices:
+            logger.warning(f"\n⚠️  SUPPRESSION DES AIDES FACTICES EN COURS...")
+            fake_ids = [aide.get('aid_id') or str(aide.get('_id')) for aide in aides_factices]
+            result = await self.db.aides.delete_many({
+                '$or': [
+                    {'aid_id': {'$in': fake_ids}},
+                    {'source': 'manual'}
+                ]
+            })
+            fake_deleted_count = result.deleted_count
+            logger.info(f"   ✅ {fake_deleted_count} aides factices supprimées de la collection 'aides'")
+        
+        # Migrer seulement les aides réelles
+        aides_to_migrate = aides_reelles
+        logger.info(f"\n🔄 Migration de {len(aides_to_migrate)} aides réelles...")
         aides_v2 = []
         erreurs = []
         
-        for i, aide_old in enumerate(aides_old, 1):
+        for i, aide_old in enumerate(aides_to_migrate, 1):
             try:
                 aide_v2 = self.migrate_aide(aide_old)
                 aides_v2.append(aide_v2)
-                logger.info(f"   ✅ [{i}/{len(aides_old)}] {aide_v2.titre[:50]}")
+                logger.info(f"   ✅ [{i}/{len(aides_to_migrate)}] {aide_v2.titre[:50]}")
             except Exception as e:
-                logger.error(f"   ❌ [{i}/{len(aides_old)}] Erreur: {e}")
+                logger.error(f"   ❌ [{i}/{len(aides_to_migrate)}] Erreur: {e}")
                 erreurs.append({
                     'aid_id': aide_old.get('aid_id', 'unknown'),
                     'titre': aide_old.get('titre', 'unknown'),
@@ -334,9 +385,19 @@ class MigrationV2:
         logger.info(f"\n" + "=" * 60)
         logger.info(f"RÉSUMÉ DE LA MIGRATION")
         logger.info(f"=" * 60)
-        logger.info(f"✅ Aides migrées avec succès: {len(aides_v2)}")
+        if clean_fake_aids:
+            logger.info(f"🗑️  Aides factices supprimées: {fake_deleted_count}")
+        else:
+            logger.info(f"⚠️  Aides factices détectées (non supprimées): {len(aides_factices)}")
+        logger.info(f"✅ Aides PAC migrées avec succès: {len(aides_v2)}")
         logger.info(f"❌ Erreurs: {len(erreurs)}")
         logger.info(f"💾 Aides dans collection V2: {count_v2}")
+        if not clean_fake_aids:
+            count_aides = await self.db.aides.count_documents({})
+            logger.info(f"📋 Aides dans collection originale: {count_aides}")
+        else:
+            count_aides = await self.db.aides.count_documents({})
+            logger.info(f"📋 Aides dans collection originale: {count_aides} (après suppression)")
         logger.info(f"=" * 60)
         
         if erreurs:
@@ -347,6 +408,9 @@ class MigrationV2:
         return {
             'success': True,
             'total_old': len(aides_old),
+            'total_fake': len(aides_factices),
+            'fake_deleted': fake_deleted_count,
+            'total_real': len(aides_reelles),
             'total_migrated': len(aides_v2),
             'total_inserted': inserted_count,
             'errors': len(erreurs),
@@ -360,24 +424,32 @@ class MigrationV2:
         }
 
 
-async def main():
-    """Fonction principale"""
-    
-    # Connexion MongoDB
-    mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-    client = AsyncIOMotorClient(mongo_url)
-    db = client[os.environ.get('DB_NAME', 'agrisubv_db')]
-    
-    # Migration
-    migration = MigrationV2(db)
-    result = await migration.migrate_all()
-    
-    # Fermeture
-    client.close()
-    
-    return result
-
-
 if __name__ == "__main__":
-    result = asyncio.run(main())
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Migration des aides vers le modèle V2')
+    parser.add_argument('--clean-fake-aids', action='store_true',
+                       help='Supprimer les 11 aides factices de la collection aides')
+    args = parser.parse_args()
+    
+    if args.clean_fake_aids:
+        logger.warning("\n⚠️  MODE NETTOYAGE ACTIVÉ - Les aides factices seront supprimées !")
+        logger.warning("⚠️  Cette opération est irréversible !")
+        confirm = input("Confirmer la suppression des aides factices ? (oui/non): ")
+        if confirm.lower() != 'oui':
+            logger.info("❌ Opération annulée")
+            sys.exit(0)
+    
+    async def run_migration():
+        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+        client = AsyncIOMotorClient(mongo_url)
+        db = client[os.environ.get('DB_NAME', 'agrisubv_db')]
+        
+        migration = MigrationV2(db)
+        result = await migration.migrate_all(clean_fake_aids=args.clean_fake_aids)
+        
+        client.close()
+        return result
+    
+    result = asyncio.run(run_migration())
     sys.exit(0 if result['success'] else 1)
