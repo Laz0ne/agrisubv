@@ -124,3 +124,63 @@
     flex-direction: column;
   }
 }
+/* Wizard Form Styles - Additional */
+
+.wizard-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-hint {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  margin-top: var(--spacing-xs);
+}
+
+.checkbox-group,
+.checkbox-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.info-box {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 4px solid var(--accent-blue);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.info-icon {
+  font-size: var(--text-2xl);
+  flex-shrink: 0;
+}
+
+.info-box strong {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--gray-900);
+}
+
+.info-box p {
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+}
