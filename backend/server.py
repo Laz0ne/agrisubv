@@ -521,6 +521,14 @@ async def run_migration_via_http():
         
         if result['success']:
             logger.info("✅ Migration terminée avec succès via HTTP")
+            # Extract only safe statistics, excluding any error details
+            safe_stats = result.get('stats', {})
+            # Ensure stats only contains aggregated counts, not error details
+            sanitized_stats = {
+                'by_source': safe_stats.get('by_source', {}),
+                'productions': safe_stats.get('productions', {}),
+                'projets': safe_stats.get('projets', {})
+            }
             return {
                 "status": "success",
                 "message": "Migration V2 terminée avec succès",
@@ -531,7 +539,7 @@ async def run_migration_via_http():
                     "total_real": result['total_real'],
                     "total_migrated": result['total_migrated'],
                     "errors": result['errors'],
-                    "stats": result.get('stats', {})
+                    "stats": sanitized_stats
                 },
                 "summary": {
                     "aides_before": result['total_old'],
@@ -545,10 +553,11 @@ async def run_migration_via_http():
             # Log detailed errors but don't expose them to clients
             if result.get('errors_details'):
                 logger.error(f"Détails des erreurs: {result.get('errors_details')}")
+            # Return only error count, no details
             return {
                 "status": "error",
                 "message": "La migration a échoué. Consultez les logs du serveur pour plus de détails.",
-                "errors_count": result.get('errors', 0)
+                "errors_count": int(result.get('errors', 0))
             }
             
     except ImportError as e:
