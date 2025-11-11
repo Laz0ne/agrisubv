@@ -531,7 +531,6 @@ async def run_migration_via_http():
                     "total_real": result['total_real'],
                     "total_migrated": result['total_migrated'],
                     "errors": result['errors'],
-                    "errors_details": result.get('errors_details', []),
                     "stats": result.get('stats', {})
                 },
                 "summary": {
@@ -543,17 +542,20 @@ async def run_migration_via_http():
             }
         else:
             logger.error("❌ La migration a échoué")
+            # Log detailed errors but don't expose them to clients
+            if result.get('errors_details'):
+                logger.error(f"Détails des erreurs: {result.get('errors_details')}")
             return {
                 "status": "error",
-                "message": "La migration a échoué",
-                "errors": result.get('errors_details', [])
+                "message": "La migration a échoué. Consultez les logs du serveur pour plus de détails.",
+                "errors_count": result.get('errors', 0)
             }
             
     except ImportError as e:
         logger.error(f"❌ Erreur import MigrationV2: {e}")
         return {
             "status": "error",
-            "message": f"Erreur lors de l'import du module de migration: {str(e)}",
+            "message": "Erreur lors de l'import du module de migration. Consultez les logs du serveur.",
             "error_type": "import_error"
         }
     except Exception as e:
@@ -562,7 +564,7 @@ async def run_migration_via_http():
         logger.error(traceback.format_exc())
         return {
             "status": "error",
-            "message": f"Erreur lors de l'exécution de la migration: {str(e)}",
+            "message": "Erreur lors de l'exécution de la migration. Consultez les logs du serveur.",
             "error_type": "execution_error"
         }
 
@@ -629,7 +631,7 @@ async def get_migration_status():
         logger.error(f"❌ Erreur lors de la vérification du statut: {e}")
         return {
             "status": "error",
-            "message": f"Erreur: {str(e)}"
+            "message": "Erreur lors de la vérification du statut. Consultez les logs du serveur."
         }
 
 @api_router.post("/aides")
