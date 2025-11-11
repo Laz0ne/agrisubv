@@ -480,6 +480,158 @@ async def test_matching_endpoint():
             "message": "❌ Erreur lors du test du matching engine"
         }
 
+# ============ ADMIN ENDPOINTS ============
+
+@api_router.post("/admin/run-migration")
+async def run_migration_via_http():
+    """
+    Endpoint admin pour exécuter la migration V2 avec suppression des aides factices
+    
+    Accessible via :
+    - POST https://agrisubv-backend.onrender.com/api/admin/run-migration
+    - GET https://agrisubv-backend.onrender.com/api/admin/run-migration (si modifié en @api_router.get)
+    
+    Returns:
+        {
+            "status": "success" | "error",
+            "message": str,
+            "migration_results": {
+                "total_old": int,
+                "total_fake": int,
+                "fake_deleted": int,
+                "total_real": int,
+                "total_migrated": int,
+                "errors": int,
+                "stats": {...}
+            }
+        }
+    """
+    try:
+        logger.info("🚀 Démarrage de la migration V2 via HTTP...")
+        
+        # Importer la classe de migration
+        from migrate_to_v2 import MigrationV2
+        
+        # Créer l'instance de migration avec la connexion DB existante
+        migration = MigrationV2(db)
+        
+        # Exécuter la migration avec suppression des aides factices
+        logger.info("⚠️  Mode: Suppression des aides factices ACTIVÉ")
+        result = await migration.migrate_all(clean_fake_aids=True)
+        
+        if result['success']:
+            logger.info("✅ Migration terminée avec succès via HTTP")
+            return {
+                "status": "success",
+                "message": "Migration V2 terminée avec succès",
+                "migration_results": {
+                    "total_old": result['total_old'],
+                    "total_fake": result['total_fake'],
+                    "fake_deleted": result['fake_deleted'],
+                    "total_real": result['total_real'],
+                    "total_migrated": result['total_migrated'],
+                    "errors": result['errors'],
+                    "errors_details": result.get('errors_details', []),
+                    "stats": result.get('stats', {})
+                },
+                "summary": {
+                    "aides_before": result['total_old'],
+                    "aides_after": result['total_real'],
+                    "aides_v2_created": result['total_migrated'],
+                    "fake_aids_removed": result['fake_deleted']
+                }
+            }
+        else:
+            logger.error("❌ La migration a échoué")
+            return {
+                "status": "error",
+                "message": "La migration a échoué",
+                "errors": result.get('errors_details', [])
+            }
+            
+    except ImportError as e:
+        logger.error(f"❌ Erreur import MigrationV2: {e}")
+        return {
+            "status": "error",
+            "message": f"Erreur lors de l'import du module de migration: {str(e)}",
+            "error_type": "import_error"
+        }
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la migration via HTTP: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {
+            "status": "error",
+            "message": f"Erreur lors de l'exécution de la migration: {str(e)}",
+            "error_type": "execution_error"
+        }
+
+
+@api_router.get("/admin/migration-status")
+async def get_migration_status():
+    """
+    Vérifie l'état des collections pour savoir si la migration a été effectuée
+    
+    Returns:
+        {
+            "aides_count": int,
+            "aides_v2_count": int,
+            "migration_done": bool,
+            "message": str
+        }
+    """
+    try:
+        # Compter les documents dans chaque collection
+        aides_count = await db.aides.count_documents({})
+        aides_v2_count = await db.aides_v2.count_documents({})
+        
+        # Compter les aides actives
+        aides_active = await db.aides.count_documents({"expiree": False})
+        aides_v2_active = await db.aides_v2.count_documents({"statut": "active"})
+        
+        # Déterminer si la migration a été faite
+        migration_done = aides_v2_count > 0
+        
+        # Compter par source dans aides
+        sources_v1 = {}
+        async for aide in db.aides.find({}, {"source": 1}):
+            source = aide.get("source", "manual")
+            sources_v1[source] = sources_v1.get(source, 0) + 1
+        
+        # Compter par source dans aides_v2
+        sources_v2 = {}
+        async for aide in db.aides_v2.find({}, {"source": 1}):
+            source = aide.get("source", "manual")
+            sources_v2[source] = sources_v2.get(source, 0) + 1
+        
+        return {
+            "aides_collection": {
+                "total": aides_count,
+                "active": aides_active,
+                "by_source": sources_v1
+            },
+            "aides_v2_collection": {
+                "total": aides_v2_count,
+                "active": aides_v2_active,
+                "by_source": sources_v2
+            },
+            "migration_done": migration_done,
+            "message": "✅ Migration effectuée" if migration_done else "⚠️ Migration non effectuée",
+            "recommendations": [
+                "Lancer POST /api/admin/run-migration pour effectuer la migration"
+            ] if not migration_done else [
+                "Migration déjà effectuée",
+                "Vous pouvez tester le matching avec POST /api/matching"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la vérification du statut: {e}")
+        return {
+            "status": "error",
+            "message": f"Erreur: {str(e)}"
+        }
+
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
     aide_dict = aide.dict()
