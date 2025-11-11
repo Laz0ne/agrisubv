@@ -1,0 +1,122 @@
+/* Header Styles - AgriSubv V2 */
+
+.header {
+  background: var(--bg-white);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) 0;
+  gap: var(--spacing-lg);
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--gray-900);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--transition-base);
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+.logo-icon {
+  font-size: var(--text-2xl);
+  display: inline-block;
+  animation: bounce 2s infinite;
+}
+
+.logo-text {
+  background: var(--bg-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: center;
+}
+
+.nav-link {
+  color: var(--gray-700);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition-base);
+  position: relative;
+  padding: var(--spacing-sm) 0;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary-green);
+  transition: width var(--transition-base);
+}
+
+.nav-link:hover {
+  color: var(--primary-green);
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Button Account */
+.btn-account {
+  background: var(--primary-green);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: var(--text-sm);
+}
+
+.btn-account:hover {
+  background: var(--primary-green-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-account:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav {
+    display: none;
+  }
+  
+  .header-content {
+    justify-content: space-between;
+  }
+  
+  .logo-text {
+    font-size: var(--text-lg);
+  }
+}
