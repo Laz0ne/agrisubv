@@ -34,11 +34,11 @@ class AidesTerritoiresSyncer:
         page = 1
         
         params = {
-            'targeted_audiences': 'farmers',
-            'is_charged': 'false',
-            'page_size': page_size,
-            'page': page
-        }
+    'categories': 'agriculture',  # Chercher par catégorie au lieu de audience
+    'is_charged': 'false',
+    'page_size': page_size,
+    'page': page
+}
         
         logger.info("🔄 Début de la récupération des aides agricoles...")
         
