@@ -1,6 +1,14 @@
 """
 Script de migration des aides existantes vers le modèle V2
-Migre les 29 aides existantes (11 manuelles + 18 PAC) vers le nouveau schéma
+
+Fonctionnalités:
+- Détecte et filtre les aides factices (source='manual')
+- Migre uniquement les aides PAC réelles vers le nouveau schéma V2
+- Option --clean-fake-aids pour supprimer les aides factices de la collection originale
+
+Usage:
+    python migrate_to_v2.py                    # Migration sans suppression
+    python migrate_to_v2.py --clean-fake-aids  # Migration avec suppression des aides factices
 """
 
 import asyncio
