@@ -521,14 +521,7 @@ async def run_migration_via_http():
         
         if result['success']:
             logger.info("✅ Migration terminée avec succès via HTTP")
-            # Extract only safe statistics, excluding any error details
-            safe_stats = result.get('stats', {})
-            # Ensure stats only contains aggregated counts, not error details
-            sanitized_stats = {
-                'by_source': safe_stats.get('by_source', {}),
-                'productions': safe_stats.get('productions', {}),
-                'projets': safe_stats.get('projets', {})
-            }
+            
             # Extract and sanitize all numeric values to prevent any object leakage
             total_old = int(result.get('total_old', 0))
             total_fake = int(result.get('total_fake', 0))
@@ -536,6 +529,20 @@ async def run_migration_via_http():
             total_real = int(result.get('total_real', 0))
             total_migrated = int(result.get('total_migrated', 0))
             errors_count = int(result.get('errors', 0))
+            
+            # Extract and sanitize stats - rebuild dicts to ensure no error objects leak
+            safe_stats = result.get('stats', {})
+            by_source = {}
+            for k, v in safe_stats.get('by_source', {}).items():
+                by_source[str(k)] = int(v) if isinstance(v, (int, float)) else 0
+            
+            productions = {}
+            for k, v in safe_stats.get('productions', {}).items():
+                productions[str(k)] = int(v) if isinstance(v, (int, float)) else 0
+            
+            projets = {}
+            for k, v in safe_stats.get('projets', {}).items():
+                projets[str(k)] = int(v) if isinstance(v, (int, float)) else 0
             
             return {
                 "status": "success",
@@ -547,7 +554,11 @@ async def run_migration_via_http():
                     "total_real": total_real,
                     "total_migrated": total_migrated,
                     "errors": errors_count,
-                    "stats": sanitized_stats
+                    "stats": {
+                        "by_source": by_source,
+                        "productions": productions,
+                        "projets": projets
+                    }
                 },
                 "summary": {
                     "aides_before": total_old,
