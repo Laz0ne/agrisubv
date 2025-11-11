@@ -610,7 +610,47 @@ async def get_stats():
         "aides_actives": aides_actives,
         "par_organisme": organismes
     }
+# ============ SYNC AIDES-TERRITOIRES ============
 
+from sync_aides_territoires import sync_aides_to_db
+
+@api_router.post("/sync/aides-territoires")
+async def sync_aides_territoires(limit: Optional[int] = None):
+    """
+    Synchronise les aides depuis l'API Aides-Territoires
+    
+    Paramètres:
+    - limit: Nombre maximum d'aides à synchroniser (optionnel, pour tests)
+    """
+    try:
+        result = await sync_aides_to_db(db, limit=limit)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur lors de la synchronisation : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/sync/status")
+async def get_sync_status():
+    """Retourne le statut de la base de données"""
+    
+    total_aides = await db.aides.count_documents({})
+    aides_at = await db.aides.count_documents({"source": "aides-territoires"})
+    aides_manuelles = await db.aides.count_documents({"source": {"$ne": "aides-territoires"}})
+    aides_actives = await db.aides.count_documents({"expiree": False})
+    
+    derniere_aide = await db.aides.find_one(
+        {"source": "aides-territoires"},
+        sort=[("derniere_maj", -1)]
+    )
+    derniere_maj = derniere_aide.get('derniere_maj') if derniere_aide else None
+    
+    return {
+        "total_aides": total_aides,
+        "aides_aides_territoires": aides_at,
+        "aides_manuelles": aides_manuelles,
+        "aides_actives": aides_actives,
+        "derniere_synchronisation": derniere_maj
+    }
 app.include_router(api_router)
 
 app.add_middleware(
