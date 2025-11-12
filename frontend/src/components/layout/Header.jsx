@@ -2,6 +2,10 @@ import React from 'react';
 import './Header.css';
 
 export const Header = () => {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -12,7 +16,7 @@ export const Header = () => {
   return (
     <header className="header">
       <div className="header-container">
-        <div className="header-logo">
+        <div className="header-logo" onClick={scrollToTop}>
           <span className="logo-icon">🌾</span>
           <span className="logo-text">AgriSubv</span>
         </div>
@@ -20,7 +24,7 @@ export const Header = () => {
         <nav className="header-nav">
           <button 
             className="nav-link"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={scrollToTop}
           >
             Accueil
           </button>
