@@ -1,4 +1,4 @@
-/* App Styles - AgriSubv V2 - Photo dans Hero uniquement */
+/* App Styles - AgriSubv V2 - Photo PURE sans overlay */
 
 .app {
   min-height: 100vh;
@@ -9,7 +9,6 @@
   overflow-x: hidden;
 }
 
-/* Pas de photo en background global */
 .app::before {
   display: none;
 }
@@ -18,7 +17,6 @@
   display: none;
 }
 
-/* Bande verte décorative */
 .app .decorative-band {
   position: fixed;
   top: 80px;
@@ -47,16 +45,16 @@
 }
 
 /* ========================================
-   HERO AVEC PHOTO
+   HERO AVEC PHOTO PURE (sans overlay)
    ======================================== */
 
-.hero-section {
+.hero {
   position: relative;
   overflow: hidden;
 }
 
-/* Photo d'agriculteur dans le Hero */
-.hero-section::before {
+/* Photo d'agriculteur - 100% VISIBLE */
+.hero::before {
   content: '';
   position: absolute;
   top: 0;
@@ -70,35 +68,19 @@
   background-repeat: no-repeat;
   z-index: 0;
   pointer-events: none;
-  filter: saturate(1.1) brightness(1.05);
+  filter: saturate(1.1) brightness(1.0); /* Légèrement assombri pour le texte */
 }
 
-/* Overlay coloré sur la photo */
-.hero-section::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    linear-gradient(135deg, 
-      rgba(16, 185, 129, 0.75) 0%, 
-      rgba(59, 130, 246, 0.75) 100%
-    );
-  z-index: 1;
-  pointer-events: none;
+/* PAS D'OVERLAY - Photo pure */
+.hero::after {
+  display: none;
 }
 
-/* Contenu par-dessus la photo */
-.hero-section > * {
+/* Contenu par-dessus */
+.hero > * {
   position: relative;
   z-index: 2;
 }
-
-/* ========================================
-   SECTIONS (sans photo)
-   ======================================== */
 
 section {
   position: relative;
@@ -183,7 +165,7 @@ html {
   position: relative;
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  border: 2px solid transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -201,7 +183,7 @@ html {
 .btn-primary:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .btn-primary:hover::before {
@@ -265,7 +247,8 @@ html {
     height: 4px;
   }
   
-  .hero-section::before {
+  .hero::before {
     background-position: center 35%;
+    filter: brightness(0.95); /* Un peu plus sombre sur mobile */
   }
 }
