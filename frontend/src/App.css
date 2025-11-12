@@ -247,5 +247,85 @@ html {
   backdrop-filter: blur(10px);
   border: 2px solid rgba(132, 204, 22, 0.2);
   box-shadow: 0 6px 16px rgba(132, 204, 22, 0.12);
-  transition: all var*
-
+  transition: all var(--transition-base);
+}
+
+.card:hover,
+.wizard-card:hover,
+.step-card:hover,
+.aide-card:hover,
+.stat-card:hover,
+.faq-item:hover {
+  box-shadow: 0 12px 32px rgba(132, 204, 22, 0.25);
+  transform: translateY(-6px);
+  border-color: rgba(132, 204, 22, 0.4);
+  background: white;
+}
+
+/* Effet de brillance sur les cards */
+.card::before,
+.step-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(132, 204, 22, 0.1), transparent);
+  transition: left 0.8s;
+}
+
+.card:hover::before,
+.step-card:hover::before {
+  left: 100%;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .loading-container,
+  .restart-container,
+  .wizard-container {
+    margin-top: 90px;
+  }
+  
+  .app .decorative-band {
+    top: 70px;
+    height: 4px;
+  }
+  
+  .app::before {
+    opacity: 0.05; /* Encore plus subtil sur mobile */
+  }
+}
+
+/* ========================================
+   EFFETS SPÉCIAUX AGRICULTURE
+   ======================================== */
+
+/* Effet de "crop circle" sur le Hero */
+.hero-section::after {
+  content: '';
+  position: absolute;
+  bottom: -100px;
+  right: 10%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(132, 204, 22, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+}
