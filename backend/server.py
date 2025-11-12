@@ -19,7 +19,14 @@ logger = logging.getLogger(__name__)
 
 # Imports pour matching V2
 from matching_engine import MatchingEngine
-from models_v2 import ProfilAgriculteur as ProfilAgriculteurV2, ResultatMatching, AideAgricoleV2
+from models_v2 import (
+    ProfilAgriculteur as ProfilAgriculteurV2, 
+    ResultatMatching, 
+    AideAgricoleV2,
+    StatutJuridique,
+    TypeProduction,
+    TypeProjet
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -90,6 +97,120 @@ class EligibiliteResponse(BaseModel):
 class AssistantRequest(BaseModel):
     question: str
     profil: Optional[ProfilAgriculteur] = None
+
+# ============ ADAPTATEUR POUR ANCIEN FORMAT ============
+
+class ProfilAgriculteurLegacy(BaseModel):
+    """Ancien format de profil (pour compatibilité frontend)"""
+    profil_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    region: str
+    departement: Optional[str] = None
+    statut_juridique: str
+    superficie_ha: float
+    productions: List[str] = Field(default_factory=list)
+    labels: List[str] = Field(default_factory=list)
+    age_exploitant: Optional[int] = None
+    jeune_agriculteur: bool = False
+    projets: List[str] = Field(default_factory=list)
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteurV2:
+    """Convertit l'ancien format en V2"""
+    
+    # Mapping des statuts
+    statut_mapping = {
+        "Exploitation individuelle": "INDIVIDUEL",
+        "EARL": "EARL",
+        "GAEC": "GAEC",
+        "SCEA": "SCEA",
+        "SA": "SA",
+        "CUMA": "CUMA",
+        "Coopérative": "COOPERATIVE",
+        "GIE": "GIE",
+        "Autre": "AUTRE"
+    }
+    
+    # Mapping des productions
+    production_mapping = {
+        "Céréales": "CEREALES",
+        "Maraîchage": "MARAICHAGE",
+        "Viticulture": "VITICULTURE",
+        "Arboriculture": "ARBORICULTURE",
+        "Élevage bovin": "ELEVAGE_BOVIN",
+        "Élevage ovin": "ELEVAGE_OVIN",
+        "Élevage caprin": "ELEVAGE_CAPRIN",
+        "Élevage porcin": "ELEVAGE_PORCIN",
+        "Élevage avicole": "ELEVAGE_AVICOLE",
+        "Élevage laitier": "ELEVAGE_LAITIER",
+        "Grandes cultures": "GRANDES_CULTURES",
+        "Horticulture": "HORTICULTURE",
+        "Apiculture": "APICULTURE",
+        "Aquaculture": "AQUACULTURE"
+    }
+    
+    # Mapping des projets
+    projet_mapping = {
+        "Installation": "INSTALLATION",
+        "Conversion bio": "CONVERSION_BIO",
+        "Modernisation": "MODERNISATION",
+        "Diversification": "DIVERSIFICATION",
+        "Irrigation": "IRRIGATION",
+        "Bâtiment": "BATIMENT",
+        "Matériel": "MATERIEL",
+        "Énergie": "ENERGIE",
+        "Environnement": "ENVIRONNEMENT",
+        "Formation": "FORMATION",
+        "Commercialisation": "COMMERCIALISATION",
+        "Numérique": "NUMERIQUE",
+        "Bien-être animal": "BIEN_ETRE_ANIMAL"
+    }
+    
+    # Convertir statut
+    statut_key = statut_mapping.get(legacy.statut_juridique, "AUTRE")
+    try:
+        statut = StatutJuridique[statut_key]
+    except KeyError:
+        logger.warning(f"Statut inconnu: {legacy.statut_juridique}, utilisation de AUTRE")
+        statut = StatutJuridique.AUTRE
+    
+    # Convertir productions
+    productions_v2 = []
+    for prod in legacy.productions:
+        prod_key = production_mapping.get(prod)
+        if prod_key:
+            try:
+                productions_v2.append(TypeProduction[prod_key])
+            except KeyError:
+                logger.warning(f"Production inconnue: {prod}")
+    
+    # Convertir projets
+    projets_v2 = []
+    for proj in legacy.projets:
+        proj_key = projet_mapping.get(proj)
+        if proj_key:
+            try:
+                projets_v2.append(TypeProjet[proj_key])
+            except KeyError:
+                logger.warning(f"Projet inconnu: {proj}")
+    
+    # Créer le profil V2
+    return ProfilAgriculteurV2(
+        profil_id=legacy.profil_id,
+        region=legacy.region,
+        departement=legacy.departement or "00",
+        statut_juridique=statut,
+        sau_totale=legacy.superficie_ha,
+        sau_bio=legacy.superficie_ha if "Agriculture Biologique" in legacy.labels or "Bio" in legacy.labels else 0,
+        productions=productions_v2,
+        production_principale=productions_v2[0] if productions_v2 else None,
+        age=legacy.age_exploitant,
+        jeune_agriculteur=legacy.jeune_agriculteur,
+        labels=legacy.labels,
+        label_bio="Agriculture Biologique" in legacy.labels or "Bio" in legacy.labels,
+        projets_en_cours=projets_v2,
+        created_at=legacy.created_at
+    )
 
 # ============ LOGIQUE ELIGIBILITE ============ 
 
@@ -224,9 +345,7 @@ async def get_aides(
     skip: int = 0,
     limit: int = 100
 ):
-    """
-    Récupère les aides avec filtres avancés
-    """
+    """Récupère les aides avec filtres avancés"""
     query = {}
     
     if not include_expired:
@@ -264,7 +383,6 @@ async def get_aides(
         ]
     
     total = await db.aides.count_documents(query)
-    
     aides_cursor = db.aides.find(query).skip(skip).limit(limit)
     aides = await aides_cursor.to_list(length=limit)
     
@@ -304,11 +422,20 @@ async def check_eligibilite(profil: ProfilAgriculteur):
 # ============ MATCHING V2 INTELLIGENT ============
 
 @api_router.post("/matching")
-async def calculate_matching_v2(profil: ProfilAgriculteurV2):
+async def calculate_matching_v2(profil_data: Dict[str, Any]):
     """
-    Matching intelligent V2 entre un profil agriculteur et toutes les aides V2
+    Matching intelligent V2 - Accepte ancien et nouveau format
     """
     try:
+        # Détecter le format (V2 a "sau_totale", ancien a "superficie_ha")
+        if "superficie_ha" in profil_data:
+            logger.info("🔄 Conversion ancien format → V2")
+            legacy_profil = ProfilAgriculteurLegacy(**profil_data)
+            profil = convert_legacy_to_v2(legacy_profil)
+        else:
+            logger.info("✅ Format V2 détecté")
+            profil = ProfilAgriculteurV2(**profil_data)
+        
         logger.info(f"🎯 Matching V2 pour profil: {profil.region}, {profil.statut_juridique.value}")
         
         # Récupérer toutes les aides V2 actives
@@ -395,9 +522,7 @@ async def calculate_matching_v2(profil: ProfilAgriculteurV2):
 
 @api_router.get("/matching/test")
 async def test_matching_endpoint():
-    """
-    Endpoint de test pour vérifier que le matching engine fonctionne
-    """
+    """Endpoint de test pour vérifier que le matching engine fonctionne"""
     try:
         engine = MatchingEngine()
         
@@ -430,9 +555,7 @@ async def test_matching_endpoint():
 
 @api_router.post("/admin/run-migration")
 async def run_migration_via_http():
-    """
-    Endpoint admin pour exécuter la migration V2
-    """
+    """Endpoint admin pour exécuter la migration V2"""
     try:
         logger.info("🚀 Démarrage de la migration V2 via HTTP...")
         
@@ -495,7 +618,7 @@ async def run_migration_via_http():
                 logger.error(f"Détails des erreurs: {result.get('errors_details')}")
             return {
                 "status": "error",
-                "message": "La migration a échoué. Consultez les logs du serveur pour plus de détails.",
+                "message": "La migration a échoué. Consultez les logs du serveur.",
                 "errors_count": int(result.get('errors', 0))
             }
             
@@ -519,9 +642,7 @@ async def run_migration_via_http():
 
 @api_router.get("/admin/migration-status")
 async def get_migration_status():
-    """
-    Vérifie l'état des collections
-    """
+    """Vérifie l'état des collections"""
     try:
         aides_count = await db.aides.count_documents({})
         aides_v2_count = await db.aides_v2.count_documents({})
@@ -555,18 +676,18 @@ async def get_migration_status():
             "migration_done": migration_done,
             "message": "✅ Migration effectuée" if migration_done else "⚠️ Migration non effectuée",
             "recommendations": [
-                "Lancer POST /api/admin/run-migration pour effectuer la migration"
+                "Lancer POST /api/admin/run-migration"
             ] if not migration_done else [
-                "Migration déjà effectuée",
-                "Vous pouvez tester le matching avec POST /api/matching"
+                "Migration OK",
+                "Testez POST /api/matching"
             ]
         }
         
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la vérification du statut: {e}")
+        logger.error(f"❌ Erreur statut: {e}")
         return {
             "status": "error",
-            "message": "Erreur lors de la vérification du statut."
+            "message": "Erreur vérification statut"
         }
 
 @api_router.post("/aides")
@@ -583,7 +704,7 @@ async def create_or_update_aide(aide: AideAgricole):
 
 @api_router.post("/assistant")
 async def assistant_ia(request: AssistantRequest):
-    return {"reponse": "Assistant IA non disponible dans cette version."}
+    return {"reponse": "Assistant IA non disponible."}
 
 @api_router.get("/stats")
 async def get_stats():
@@ -612,7 +733,7 @@ async def sync_aides_territoires(limit: Optional[int] = None):
         result = await sync_aides_to_db(db, limit=limit)
         return result
     except Exception as e:
-        logger.error(f"Erreur lors de la synchronisation : {e}")
+        logger.error(f"Erreur sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/sync/status")
@@ -648,7 +769,7 @@ async def get_sync_status():
             "derniere_synchronisation": derniere_maj
         }
     except Exception as e:
-        logger.error(f"Erreur lors de la récupération du statut: {e}")
+        logger.error(f"Erreur statut sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 from sync_datagouv_pac import sync_pac_to_db
@@ -659,7 +780,7 @@ async def sync_datagouv_pac(limit: Optional[int] = None):
         result = await sync_pac_to_db(db, limit=limit)
         return result
     except Exception as e:
-        logger.error(f"Erreur lors de la synchronisation PAC : {e}")
+        logger.error(f"Erreur sync PAC: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 from sync_aides_territoires_v2 import sync_aides_territoires_v2
@@ -673,7 +794,7 @@ async def sync_aides_territoires_v2_endpoint(
         result = await sync_aides_territoires_v2(db, max_pages=max_pages)
         return result
     except Exception as e:
-        logger.error(f"Erreur lors de la synchronisation V2 : {e}")
+        logger.error(f"Erreur sync V2: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============ APP CONFIGURATION ============
@@ -690,29 +811,21 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def create_indexes():
-    """Crée les index MongoDB optimisés au démarrage"""
+    """Crée les index MongoDB"""
     try:
-        logger.info("🔧 Création des index MongoDB...")
+        logger.info("🔧 Création index MongoDB...")
         
         await db.aides.create_index([
             ("titre", "text"),
             ("conditions_clefs", "text")
         ], name="text_search_index")
-        logger.info("   ✅ Index texte créé")
         
         await db.aides.create_index("regions", name="regions_index")
-        logger.info("   ✅ Index régions créé")
-        
         await db.aides.create_index("source", name="source_index")
         await db.aides.create_index("expiree", name="expiree_index")
-        logger.info("   ✅ Index source et statut créés")
-        
         await db.aides.create_index("date_limite", name="date_limite_index")
-        logger.info("   ✅ Index date_limite créé")
-        
         await db.aides.create_index("productions", name="productions_index")
         await db.aides.create_index("criteres_mous_tags", name="tags_index")
-        logger.info("   ✅ Index productions et tags créés")
         
         await db.aides_v2.create_index([
             ("titre", "text"),
@@ -723,11 +836,10 @@ async def create_indexes():
         await db.aides_v2.create_index("statut", name="v2_statut_index")
         await db.aides_v2.create_index("criteres.types_production", name="v2_productions_index")
         await db.aides_v2.create_index("criteres.types_projets", name="v2_projets_index")
-        logger.info("   ✅ Index V2 créés")
         
-        logger.info("✅ Tous les index MongoDB ont été créés avec succès")
+        logger.info("✅ Index créés")
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la création des index: {e}")
+        logger.error(f"❌ Erreur index: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
