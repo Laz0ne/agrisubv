@@ -6,8 +6,8 @@ export const HeroSection = ({ onStart }) => {
     <section className="hero">
       <div className="container">
         <div className="hero-content">
-          <h1 className="hero-title animate-fadeIn">
-            🌾 Trouvez toutes vos aides agricoles
+          <h1 className="hero-title">
+            <span className="animate-fadeIn">🌾</span> Trouvez toutes vos aides agricoles
             <br />
             en quelques clics
           </h1>
@@ -20,7 +20,7 @@ export const HeroSection = ({ onStart }) => {
           </button>
         </div>
       </div>
-      <div className="scroll-indicator animate-bounce">
+      <div className="scroll-indicator">
         <span>↓</span>
       </div>
     </section>
