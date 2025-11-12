@@ -4,10 +4,6 @@ import './HeroSection.css';
 export const HeroSection = ({ onStart }) => {
   return (
     <section className="hero">
-      <div className="hero-background">
-        <div className="hero-gradient"></div>
-        <div className="hero-particles"></div>
-      </div>
       <div className="container">
         <div className="hero-content">
           <h1 className="hero-title animate-fadeIn">
