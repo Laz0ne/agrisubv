@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Imports pour matching V2
 from matching_engine import MatchingEngine
 from models_v2 import (
-    ProfilAgriculteur as ProfilAgriculteurV2, 
+    ProfilAgriculteur,  # ← CORRIGÉ : Pas d'alias, c'est déjà le modèle V2
     ResultatMatching, 
     AideAgricoleV2,
     StatutJuridique,
@@ -40,7 +40,7 @@ db = client[os.environ.get('DB_NAME', 'agrisubv_db')]
 app = FastAPI(title="AgriSubv API", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
-# ============ MODELS ============ 
+# ============ MODELS ANCIENS (pour compatibilité) ============ 
 
 class AideAgricole(BaseModel):
     aid_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -68,19 +68,6 @@ class AideAgricole(BaseModel):
     confiance: float = 1.0
     expiree: bool = False
 
-class ProfilAgriculteur(BaseModel):
-    profil_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    region: str
-    departement: Optional[str] = None
-    statut_juridique: str
-    superficie_ha: float
-    productions: List[str] = Field(default_factory=list)
-    labels: List[str] = Field(default_factory=list)
-    age_exploitant: Optional[int] = None
-    jeune_agriculteur: bool = False
-    projets: List[str] = Field(default_factory=list)
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
 class EligibiliteResult(BaseModel):
     aide: AideAgricole
     eligible: bool
@@ -89,14 +76,14 @@ class EligibiliteResult(BaseModel):
     resume_ia: str = ""
 
 class EligibiliteResponse(BaseModel):
-    profil: ProfilAgriculteur
+    profil: Dict[str, Any]
     aides_eligibles: List[EligibiliteResult]
     total_aides: int
     total_eligibles: int
 
 class AssistantRequest(BaseModel):
     question: str
-    profil: Optional[ProfilAgriculteur] = None
+    profil: Optional[Dict[str, Any]] = None
 
 # ============ ADAPTATEUR POUR ANCIEN FORMAT ============
 
@@ -115,8 +102,16 @@ class ProfilAgriculteurLegacy(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
-def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteurV2:
-    """Convertit l'ancien format en V2 avec mappings directs vers Enums"""
+def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteur:
+    """
+    Convertit l'ancien format (frontend) en format V2 (backend)
+    
+    Transformations principales :
+    - superficie_ha → sau_totale
+    - statut_juridique (string) → StatutJuridique (Enum)
+    - productions (List[str]) → productions (List[TypeProduction])
+    - projets (List[str]) → projets_en_cours (List[TypeProjet])
+    """
     
     # Mapping direct String → Enum (pas de string intermédiaire)
     statut_mapping = {
@@ -201,42 +196,42 @@ def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteurV2
         for label in legacy.labels
     )
     
-    logger.info(f"✅ Conversion: {len(productions_v2)} productions, {len(projets_v2)} projets")
+    logger.info(f"✅ Conversion réussie: {len(productions_v2)} productions, {len(projets_v2)} projets")
     
-    # Créer le profil V2
-    return ProfilAgriculteurV2(
+    # Créer le profil V2 avec tous les champs requis
+    return ProfilAgriculteur(
         profil_id=legacy.profil_id,
         region=legacy.region,
-        departement=legacy.departement or "00",
+        departement=legacy.departement or "00",  # Défaut si non fourni
         statut_juridique=statut,
-        sau_totale=legacy.superficie_ha,
+        sau_totale=legacy.superficie_ha,  # ← Renommage du champ
         sau_bio=legacy.superficie_ha if is_bio else 0.0,
-        productions=productions_v2,
+        productions=productions_v2,  # ← Liste d'Enums
         production_principale=productions_v2[0] if productions_v2 else None,
         age=legacy.age_exploitant,
         jeune_agriculteur=legacy.jeune_agriculteur,
         labels=legacy.labels,
         label_bio=is_bio,
-        projets_en_cours=projets_v2,
+        projets_en_cours=projets_v2,  # ← Renommage du champ
         created_at=legacy.created_at
     )
 
-# ============ LOGIQUE ELIGIBILITE ============ 
+# ============ LOGIQUE ELIGIBILITE (ancienne API) ============ 
 
-def evaluate_criteres_durs(criteres: Dict[str, Any], profil: ProfilAgriculteur) -> tuple:
+def evaluate_criteres_durs(criteres: Dict[str, Any], profil: Dict[str, Any]) -> tuple:
     raisons = []
     
     def get_profil_value(key: str):
         mapping = {
-            "$region": profil.region,
-            "$departement": profil.departement,
-            "$statut": profil.statut_juridique,
-            "$superficie_ha": profil.superficie_ha,
-            "$productions": profil.productions,
-            "$labels": profil.labels,
-            "$age": profil.age_exploitant,
-            "$jeune_agriculteur": profil.jeune_agriculteur,
-            "$projets": profil.projets,
+            "$region": profil.get("region"),
+            "$departement": profil.get("departement"),
+            "$statut": profil.get("statut_juridique"),
+            "$superficie_ha": profil.get("superficie_ha"),
+            "$productions": profil.get("productions", []),
+            "$labels": profil.get("labels", []),
+            "$age": profil.get("age_exploitant"),
+            "$jeune_agriculteur": profil.get("jeune_agriculteur", False),
+            "$projets": profil.get("projets", []),
         }
         return mapping.get(key)
 
@@ -306,24 +301,28 @@ def evaluate_criteres_durs(criteres: Dict[str, Any], profil: ProfilAgriculteur) 
     eligible = eval_expr(criteres)
     return eligible, raisons
 
-def calculate_score_pertinence(aide: AideAgricole, profil: ProfilAgriculteur) -> float:
+def calculate_score_pertinence(aide: AideAgricole, profil: Dict[str, Any]) -> float:
     score = 0.0
     max_score = 0.0
     
+    projets = profil.get("projets", [])
+    labels = profil.get("labels", [])
+    productions = profil.get("productions", [])
+    
     for tag in aide.criteres_mous_tags:
         max_score += 1.0
-        if tag.lower() in [p.lower() for p in profil.projets]:
+        if tag.lower() in [p.lower() for p in projets]:
             score += 1.0
-        elif tag.lower() in [l.lower() for l in profil.labels]:
+        elif tag.lower() in [l.lower() for l in labels]:
             score += 0.8
-        elif tag.lower() in [p.lower() for p in profil.productions]:
+        elif tag.lower() in [p.lower() for p in productions]:
             score += 0.6
     
     if max_score > 0:
         return round((score / max_score) * 100, 1)
     return 0.0
 
-async def generate_ia_summary(aide: AideAgricole, profil: ProfilAgriculteur, eligible: bool, raisons: List[str]) -> str:
+async def generate_ia_summary(aide: AideAgricole, profil: Dict[str, Any], eligible: bool, raisons: List[str]) -> str:
     if eligible:
         return f"✅ Vous êtes éligible à cette aide. Votre profil correspond aux critères requis."
     else:
@@ -337,7 +336,7 @@ async def root():
 
 @api_router.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {"status": "ok", "version": "1.0.0", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @api_router.get("/aides", response_model=List[AideAgricole])
 async def get_aides(
@@ -398,7 +397,7 @@ async def get_aides(
     return [AideAgricole(**aide) for aide in aides]
 
 @api_router.post("/eligibilite", response_model=EligibiliteResponse)
-async def check_eligibilite(profil: ProfilAgriculteur):
+async def check_eligibilite(profil: Dict[str, Any]):
     aides_cursor = db.aides.find({"expiree": False})
     aides = await aides_cursor.to_list(length=500)
     
@@ -434,17 +433,21 @@ async def check_eligibilite(profil: ProfilAgriculteur):
 async def calculate_matching_v2(profil_data: Dict[str, Any]):
     """
     Matching intelligent V2 - Accepte ancien et nouveau format
+    
+    Détection automatique du format :
+    - Si "superficie_ha" présent → ancien format (conversion automatique)
+    - Si "sau_totale" présent → nouveau format V2 (direct)
     """
     try:
-        # Détecter le format (V2 a "sau_totale", ancien a "superficie_ha")
+        # Détecter le format
         if "superficie_ha" in profil_data:
-            logger.info("🔄 Détection format legacy, conversion en V2...")
+            logger.info("🔄 Détection format LEGACY (frontend), conversion en V2...")
             legacy_profil = ProfilAgriculteurLegacy(**profil_data)
-            profil = convert_legacy_to_v2(legacy_profil)
+            profil = convert_legacy_to_v2(legacy_profil)  # ← Utilise ProfilAgriculteur (le V2)
             logger.info(f"✅ Conversion réussie")
         else:
             logger.info("✅ Format V2 détecté directement")
-            profil = ProfilAgriculteurV2(**profil_data)
+            profil = ProfilAgriculteur(**profil_data)  # ← CORRIGÉ : Utilise ProfilAgriculteur directement
         
         logger.info(f"🎯 Matching V2 pour: {profil.region}, {profil.statut_juridique.value}")
         
@@ -577,76 +580,31 @@ async def run_migration_via_http():
         result = await migration.migrate_all(clean_fake_aids=True)
         
         if result['success']:
-            logger.info("✅ Migration terminée avec succès via HTTP")
-            
-            total_old = int(result.get('total_old', 0))
-            total_fake = int(result.get('total_fake', 0))
-            fake_deleted = int(result.get('fake_deleted', 0))
-            total_real = int(result.get('total_real', 0))
-            total_migrated = int(result.get('total_migrated', 0))
-            errors_count = int(result.get('errors', 0))
-            
-            safe_stats = result.get('stats', {})
-            by_source = {}
-            for k, v in safe_stats.get('by_source', {}).items():
-                by_source[str(k)] = int(v) if isinstance(v, (int, float)) else 0
-            
-            productions = {}
-            for k, v in safe_stats.get('productions', {}).items():
-                productions[str(k)] = int(v) if isinstance(v, (int, float)) else 0
-            
-            projets = {}
-            for k, v in safe_stats.get('projets', {}).items():
-                projets[str(k)] = int(v) if isinstance(v, (int, float)) else 0
+            logger.info("✅ Migration terminée avec succès")
             
             return {
                 "status": "success",
                 "message": "Migration V2 terminée avec succès",
                 "migration_results": {
-                    "total_old": total_old,
-                    "total_fake": total_fake,
-                    "fake_deleted": fake_deleted,
-                    "total_real": total_real,
-                    "total_migrated": total_migrated,
-                    "errors": errors_count,
-                    "stats": {
-                        "by_source": by_source,
-                        "productions": productions,
-                        "projets": projets
-                    }
-                },
-                "summary": {
-                    "aides_before": total_old,
-                    "aides_after": total_real,
-                    "aides_v2_created": total_migrated,
-                    "fake_aids_removed": fake_deleted
+                    "total_migrated": int(result.get('total_migrated', 0)),
+                    "errors": int(result.get('errors', 0))
                 }
             }
         else:
             logger.error("❌ La migration a échoué")
-            if result.get('errors_details'):
-                logger.error(f"Détails des erreurs: {result.get('errors_details')}")
             return {
                 "status": "error",
-                "message": "La migration a échoué. Consultez les logs du serveur.",
+                "message": "La migration a échoué",
                 "errors_count": int(result.get('errors', 0))
             }
             
-    except ImportError as e:
-        logger.error(f"❌ Erreur import MigrationV2: {e}")
-        return {
-            "status": "error",
-            "message": "Erreur lors de l'import du module de migration.",
-            "error_type": "import_error"
-        }
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la migration via HTTP: {e}")
+        logger.error(f"❌ Erreur migration: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return {
             "status": "error",
-            "message": "Erreur lors de l'exécution de la migration.",
-            "error_type": "execution_error"
+            "message": "Erreur lors de l'exécution de la migration"
         }
 
 
@@ -654,43 +612,18 @@ async def run_migration_via_http():
 async def get_migration_status():
     """Vérifie l'état des collections"""
     try:
-        aides_count = await db.aides.count_documents({})
         aides_v2_count = await db.aides_v2.count_documents({})
-        
-        aides_active = await db.aides.count_documents({"expiree": False})
         aides_v2_active = await db.aides_v2.count_documents({"statut": "active"})
         
         migration_done = aides_v2_count > 0
         
-        sources_v1 = {}
-        async for aide in db.aides.find({}, {"source": 1}):
-            source = aide.get("source", "manual")
-            sources_v1[source] = sources_v1.get(source, 0) + 1
-        
-        sources_v2 = {}
-        async for aide in db.aides_v2.find({}, {"source": 1}):
-            source = aide.get("source", "manual")
-            sources_v2[source] = sources_v2.get(source, 0) + 1
-        
         return {
-            "aides_collection": {
-                "total": aides_count,
-                "active": aides_active,
-                "by_source": sources_v1
-            },
             "aides_v2_collection": {
                 "total": aides_v2_count,
-                "active": aides_v2_active,
-                "by_source": sources_v2
+                "active": aides_v2_active
             },
             "migration_done": migration_done,
-            "message": "✅ Migration effectuée" if migration_done else "⚠️ Migration non effectuée",
-            "recommendations": [
-                "Lancer POST /api/admin/run-migration"
-            ] if not migration_done else [
-                "Migration OK",
-                "Testez POST /api/matching"
-            ]
+            "message": "✅ Migration effectuée" if migration_done else "⚠️ Migration non effectuée"
         }
         
     except Exception as e:
@@ -721,16 +654,9 @@ async def get_stats():
     total_aides = await db.aides.count_documents({})
     aides_actives = await db.aides.count_documents({"expiree": False})
     
-    pipeline = [
-        {"$group": {"_id": "$organisme", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
-    ]
-    organismes = await db.aides.aggregate(pipeline).to_list(length=20)
-    
     return {
         "total_aides": total_aides,
-        "aides_actives": aides_actives,
-        "par_organisme": organismes
+        "aides_actives": aides_actives
     }
 
 # ============ SYNC ENDPOINTS ============
@@ -744,42 +670,6 @@ async def sync_aides_territoires(limit: Optional[int] = None):
         return result
     except Exception as e:
         logger.error(f"Erreur sync: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/sync/status")
-async def get_sync_status():
-    try:
-        total_aides = await db.aides.count_documents({})
-        
-        aides_manual = await db.aides.count_documents({"source": "manual"})
-        aides_at = await db.aides.count_documents({"source": "aides-territoires"})
-        aides_pac = await db.aides.count_documents({"source": "datagouv-pac"})
-        aides_no_source = await db.aides.count_documents({"source": {"$exists": False}})
-        
-        aides_actives = await db.aides.count_documents({"expiree": False})
-        aides_inactives = await db.aides.count_documents({"expiree": True})
-        
-        derniere_aide = await db.aides.find_one(
-            {"source": {"$in": ["aides-territoires", "datagouv-pac"]}},
-            sort=[("derniere_maj", -1)]
-        )
-        derniere_maj = derniere_aide.get('derniere_maj') if derniere_aide else None
-        
-        return {
-            "total_aides": total_aides,
-            "by_source": {
-                "manual": aides_manual + aides_no_source,
-                "aides_territoires": aides_at,
-                "datagouv_pac": aides_pac
-            },
-            "by_status": {
-                "active": aides_actives,
-                "inactive": aides_inactives
-            },
-            "derniere_synchronisation": derniere_maj
-        }
-    except Exception as e:
-        logger.error(f"Erreur statut sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 from sync_datagouv_pac import sync_pac_to_db
@@ -796,10 +686,7 @@ async def sync_datagouv_pac(limit: Optional[int] = None):
 from sync_aides_territoires_v2 import sync_aides_territoires_v2
 
 @api_router.post("/sync/aides-territoires-v2")
-async def sync_aides_territoires_v2_endpoint(
-    max_pages: Optional[int] = None,
-    background_tasks = None
-):
+async def sync_aides_territoires_v2_endpoint(max_pages: Optional[int] = None):
     try:
         result = await sync_aides_territoires_v2(db, max_pages=max_pages)
         return result
@@ -825,27 +712,10 @@ async def create_indexes():
     try:
         logger.info("🔧 Création index MongoDB...")
         
-        await db.aides.create_index([
-            ("titre", "text"),
-            ("conditions_clefs", "text")
-        ], name="text_search_index")
-        
-        await db.aides.create_index("regions", name="regions_index")
-        await db.aides.create_index("source", name="source_index")
-        await db.aides.create_index("expiree", name="expiree_index")
-        await db.aides.create_index("date_limite", name="date_limite_index")
-        await db.aides.create_index("productions", name="productions_index")
-        await db.aides.create_index("criteres_mous_tags", name="tags_index")
-        
-        await db.aides_v2.create_index([
-            ("titre", "text"),
-            ("description", "text")
-        ], name="v2_text_search_index")
-        await db.aides_v2.create_index("criteres.regions", name="v2_regions_index")
-        await db.aides_v2.create_index("source", name="v2_source_index")
-        await db.aides_v2.create_index("statut", name="v2_statut_index")
-        await db.aides_v2.create_index("criteres.types_production", name="v2_productions_index")
-        await db.aides_v2.create_index("criteres.types_projets", name="v2_projets_index")
+        # Index V2
+        await db.aides_v2.create_index([("titre", "text"), ("description", "text")])
+        await db.aides_v2.create_index("source")
+        await db.aides_v2.create_index("statut")
         
         logger.info("✅ Index créés")
     except Exception as e:
