@@ -17,12 +17,14 @@ function App() {
 
   const handleStartSimulation = () => {
     setShowWizard(true);
-    // Scroll vers le wizard
+    // Scroll vers le wizard avec offset pour le header fixe
     setTimeout(() => {
-      document.querySelector('.wizard-container')?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
+      const wizardElement = document.querySelector('.wizard-container');
+      if (wizardElement) {
+        const yOffset = -100; // Offset pour le header fixe
+        const y = wizardElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
     }, 100);
   };
 
@@ -45,12 +47,14 @@ function App() {
       const data = await response.json();
       setResults(data);
       
-      // Scroll vers les résultats
+      // Scroll vers les résultats avec offset pour le header fixe
       setTimeout(() => {
-        document.querySelector('.results-container')?.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'start'
-        });
+        const resultsElement = document.querySelector('.results-container');
+        if (resultsElement) {
+          const yOffset = -100;
+          const y = resultsElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
       }, 100);
     } catch (error) {
       console.error('Erreur:', error);
@@ -62,13 +66,8 @@ function App() {
 
   return (
     <div className="app">
-      {/* Background avec formes flottantes */}
-      <div className="background-shapes">
-        <div className="background-shape shape-1"></div>
-        <div className="background-shape shape-2"></div>
-        <div className="background-shape shape-3"></div>
-        <div className="background-shape shape-4"></div>
-      </div>
+      {/* Bande décorative sous le header */}
+      <div className="decorative-band"></div>
 
       <Header />
       
