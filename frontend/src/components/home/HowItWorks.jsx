@@ -1,7 +1,7 @@
 import React from 'react';
 import './HowItWorks.css';
 
-export const HowItWorks = () => {
+export const HowItWorks = ({ onStart }) => {
   const steps = [
     {
       number: "1",
@@ -47,9 +47,9 @@ export const HowItWorks = () => {
         </div>
 
         <div className="cta-container">
-          <a href="#wizard" className="btn-primary btn-large">
+          <button onClick={onStart} className="btn-primary btn-large">
             Commencer maintenant →
-          </a>
+          </button>
         </div>
       </div>
     </section>
