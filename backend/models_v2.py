@@ -4,7 +4,7 @@ Version optimisée pour gérer 1000+ aides avec critères enrichis
 """
 
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from enum import Enum
 import uuid
@@ -211,6 +211,13 @@ class AideAgricoleV2(BaseModel):
 
 class ProfilAgriculteur(BaseModel):
     """Profil complet d'un agriculteur pour le matching"""
+    
+    # ✅ CONFIGURATION PYDANTIC V2 POUR ACCEPTER LES ENUMS DÉJÀ CRÉÉS
+    model_config = ConfigDict(
+        use_enum_values=False,  # Garde les instances Enum (pas juste leurs valeurs)
+        arbitrary_types_allowed=True,  # Permet les types personnalisés
+        validate_assignment=False  # Pas de revalidation lors de l'assignation
+    )
     
     # Identifiant
     profil_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
