@@ -1,19 +1,19 @@
-/* App Styles - AgriSubv V2 - Thème Agricole Moderne avec Background Enrichi */
+/* App Styles - AgriSubv V2 - Thème Agricole Moderne */
 
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-cream);
+  background: #fafaf5;
   position: relative;
   overflow-x: hidden;
 }
 
 /* ========================================
-   BACKGROUND LAYERS - Système multi-couches
+   BACKGROUND AGRICOLE - Pattern de blé/grain
    ======================================== */
 
-/* Couche 1 : Gradient de base animé */
+/* Texture papier kraft subtile */
 .app::before {
   content: '';
   position: fixed;
@@ -21,27 +21,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(132, 204, 22, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.08) 0%, transparent 50%);
-  animation: gradientFloat 15s ease-in-out infinite;
+  background-color: #fefdf8;
+  background-image: 
+    linear-gradient(30deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
+    linear-gradient(150deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
+    linear-gradient(30deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
+    linear-gradient(150deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8);
+  background-size: 80px 140px;
+  background-position: 0 0, 0 0, 40px 70px, 40px 70px;
+  opacity: 0.3;
   z-index: -3;
   pointer-events: none;
 }
 
-@keyframes gradientFloat {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.1);
-  }
-}
-
-/* Couche 2 : Pattern de points subtil */
+/* Motif de grains/semences */
 .app::after {
   content: '';
   position: fixed;
@@ -50,128 +43,90 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle, rgba(214, 211, 209, 0.4) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.5;
+    radial-gradient(circle at 25% 25%, rgba(132, 204, 22, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(245, 158, 11, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 50%);
   z-index: -2;
   pointer-events: none;
 }
 
-/* Couche 3 : Formes organiques flottantes */
-.app .background-shapes {
+/* Bande décorative supérieure - style champ de blé */
+.app .decorative-band {
   position: fixed;
-  top: 0;
+  top: 80px;
   left: 0;
   right: 0;
-  bottom: 0;
-  z-index: -1;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    #10b981 0%, 
+    #84cc16 25%, 
+    #f59e0b 50%, 
+    #84cc16 75%, 
+    #10b981 100%
+  );
+  opacity: 0.6;
+  z-index: 999;
   pointer-events: none;
-  overflow: hidden;
-}
-
-/* Formes individuelles - PLUS VISIBLES */
-.background-shape {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.4;  /* Augmenté de 0.15 à 0.4 */
-  filter: blur(50px);  /* Réduit de 60px à 50px */
-  animation: float 20s ease-in-out infinite;
-}
-
-.shape-1 {
-  width: 600px;  /* Augmenté de 400px */
-  height: 600px;
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  top: 10%;
-  left: 10%;
-  animation-delay: 0s;
-  animation-duration: 25s;
-}
-
-.shape-2 {
-  width: 500px;  /* Augmenté de 300px */
-  height: 500px;
-  background: linear-gradient(135deg, #84cc16 0%, #a3e635 100%);
-  top: 60%;
-  right: 15%;
-  animation-delay: 3s;
-  animation-duration: 20s;
-}
-
-.shape-3 {
-  width: 550px;  /* Augmenté de 350px */
-  height: 550px;
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-  bottom: 15%;
-  left: 20%;
-  animation-delay: 5s;
-  animation-duration: 22s;
-}
-
-.shape-4 {
-  width: 450px;  /* Augmenté de 250px */
-  height: 450px;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  top: 40%;
-  right: 40%;
-  animation-delay: 7s;
-  animation-duration: 18s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.1);
-  }
-  50% {
-    transform: translate(-20px, 40px) scale(0.9);
-  }
-  75% {
-    transform: translate(40px, 20px) scale(1.05);
-  }
 }
 
 /* ========================================
-   SECTIONS - Backgrounds alternés
+   SECTIONS - Backgrounds alternés style agricole
    ======================================== */
 
-/* Hero Section - Gradient spécial */
+/* Hero Section - Dégradé chaud */
 .hero-section {
   position: relative;
-  background: linear-gradient(135deg, 
+  background: linear-gradient(180deg, 
     rgba(254, 252, 232, 1) 0%, 
-    rgba(254, 249, 195, 0.8) 50%,
-    rgba(254, 243, 199, 0.6) 100%
+    rgba(254, 249, 195, 0.8) 100%
   );
+  border-bottom: 3px solid rgba(132, 204, 22, 0.2);
 }
 
 /* Sections alternées */
+section {
+  position: relative;
+}
+
 section:nth-child(even) {
   background: white;
-  position: relative;
+  border-bottom: 1px solid rgba(214, 211, 209, 0.3);
 }
 
 section:nth-child(odd) {
-  background: rgba(254, 252, 232, 0.5);
-  position: relative;
+  background: #fefdf8;
+  border-bottom: 1px solid rgba(214, 211, 209, 0.3);
 }
 
-/* Effet de séparation entre sections */
+/* Effet de ligne horizontale décorative */
 section::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(214, 211, 209, 0.5) 50%,
+    rgba(132, 204, 22, 0.2) 20%,
+    rgba(132, 204, 22, 0.2) 80%,
     transparent 100%
   );
+}
+
+/* ========================================
+   WIZARD CONTAINER - Background spécial
+   ======================================== */
+
+.wizard-container {
+  background: linear-gradient(180deg, 
+    rgba(254, 252, 232, 0.5) 0%, 
+    rgba(255, 255, 255, 0.8) 100%
+  );
+  border-radius: var(--radius-2xl);
+  padding: var(--spacing-2xl);
+  margin-top: 100px; /* Espace pour le header fixe */
 }
 
 /* ========================================
@@ -181,20 +136,21 @@ section::before {
 .loading-container {
   max-width: 600px;
   margin: var(--spacing-3xl) auto;
+  margin-top: 120px; /* Espace pour le header fixe */
   text-align: center;
   padding: var(--spacing-3xl);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-xl);
-  border: 2px solid var(--beige-200);
+  box-shadow: 0 10px 40px rgba(132, 204, 22, 0.1);
+  border: 2px solid rgba(132, 204, 22, 0.2);
 }
 
 .spinner {
   width: 64px;
   height: 64px;
-  border: 6px solid var(--beige-200);
-  border-top-color: var(--primary-green);
+  border: 6px solid rgba(132, 204, 22, 0.2);
+  border-top-color: #84cc16;
   border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
   margin: 0 auto var(--spacing-lg);
@@ -218,6 +174,7 @@ section::before {
   text-align: center;
   margin: var(--spacing-3xl) auto;
   padding: 0 var(--spacing-lg);
+  margin-top: 120px; /* Espace pour le header fixe */
 }
 
 /* ========================================
@@ -228,6 +185,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Ajuster le scroll offset pour le header fixe */
+html {
+  scroll-padding-top: 100px;
+}
+
 /* ========================================
    BOUTONS - Effet agricole
    ======================================== */
@@ -235,6 +197,7 @@ html {
 .btn-primary {
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 14px rgba(132, 204, 22, 0.3);
 }
 
 .btn-primary::before {
@@ -244,8 +207,12 @@ html {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.6s;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
 }
 
 .btn-primary:hover::before {
@@ -253,18 +220,19 @@ html {
 }
 
 /* ========================================
-   CARDS - Amélioration globale
+   CARDS - Style agricole
    ======================================== */
 
 .card,
 .wizard-card,
 .step-card,
 .aide-card,
-.stat-card {
+.stat-card,
+.faq-item {
   background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--beige-200);
-  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(5px);
+  border: 2px solid rgba(132, 204, 22, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transition: all var(--transition-base);
 }
 
@@ -272,10 +240,11 @@ html {
 .wizard-card:hover,
 .step-card:hover,
 .aide-card:hover,
-.stat-card:hover {
-  box-shadow: var(--shadow-xl);
+.stat-card:hover,
+.faq-item:hover {
+  box-shadow: 0 8px 24px rgba(132, 204, 22, 0.15);
   transform: translateY(-4px);
-  border-color: var(--primary-green);
+  border-color: rgba(132, 204, 22, 0.3);
   background: white;
 }
 
@@ -284,20 +253,13 @@ html {
    ======================================== */
 
 @media (max-width: 768px) {
-  .loading-container {
-    margin: var(--spacing-xl) var(--spacing-lg);
-    padding: var(--spacing-xl);
+  .loading-container,
+  .restart-container,
+  .wizard-container {
+    margin-top: 90px;
   }
   
-  .background-shape {
-    filter: blur(40px);
-  }
-  
-  .shape-1,
-  .shape-2,
-  .shape-3,
-  .shape-4 {
-    width: 250px;
-    height: 250px;
+  .app .decorative-band {
+    top: 70px;
   }
 }
