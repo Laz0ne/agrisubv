@@ -62,6 +62,14 @@ function App() {
 
   return (
     <div className="app">
+      {/* Background avec formes flottantes */}
+      <div className="background-shapes">
+        <div className="background-shape shape-1"></div>
+        <div className="background-shape shape-2"></div>
+        <div className="background-shape shape-3"></div>
+        <div className="background-shape shape-4"></div>
+      </div>
+
       <Header />
       
       {!showWizard && !results && (
