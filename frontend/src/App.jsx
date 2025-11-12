@@ -66,7 +66,7 @@ function App() {
       {!showWizard && !results && (
         <>
           <HeroSection onStart={handleStartSimulation} />
-          <HowItWorks />
+          <HowItWorks onStart={handleStartSimulation} />
         </>
       )}
       
