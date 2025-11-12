@@ -1,71 +1,85 @@
-/* Design System Variables - AgriSubv V2 */
+/* Design System - AgriSubv V2 - Thème Agricole Moderne */
+
 :root {
-  /* Colors - Green Agricultural Modern */
+  /* Couleurs principales - Naturelles */
   --primary-green: #10b981;
-  --primary-green-light: #34d399;
   --primary-green-dark: #059669;
+  --primary-green-light: #34d399;
   
-  /* Colors - Purple Elegant */
-  --secondary-purple: #8b5cf6;
-  --secondary-purple-light: #a78bfa;
-  --secondary-purple-dark: #7c3aed;
+  --secondary-green: #84cc16; /* Vert pomme/chartreuse */
+  --earth-brown: #92400e; /* Terre */
+  --wheat-gold: #f59e0b; /* Blé doré */
   
-  /* Colors - Blue Accent */
   --accent-blue: #3b82f6;
-  --accent-blue-light: #60a5fa;
+  --accent-purple: #8b5cf6;
+  
+  /* Tons naturels */
+  --beige-50: #fefce8;
+  --beige-100: #fef9c3;
+  --beige-200: #fef08a;
+  
+  --earth-50: #fef3c7;
+  --earth-100: #fde68a;
+  --earth-200: #fcd34d;
+  
+  /* Gris naturels (chauds) */
+  --gray-50: #fafaf9;
+  --gray-100: #f5f5f4;
+  --gray-200: #e7e5e4;
+  --gray-300: #d6d3d1;
+  --gray-400: #a8a29e;
+  --gray-500: #78716c;
+  --gray-600: #57534e;
+  --gray-700: #44403c;
+  --gray-800: #292524;
+  --gray-900: #1c1917;
   
   /* Backgrounds */
-  --bg-gradient: linear-gradient(135deg, #10b981 0%, #8b5cf6 50%, #3b82f6 100%);
-  --bg-light: #f9fafb;
-  --bg-white: #ffffff;
+  --bg-light: #fafaf9;
+  --bg-cream: #fffbeb;
+  --bg-warm: #fef3c7;
+  --bg-gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  --bg-gradient-warm: linear-gradient(135deg, #84cc16 0%, #f59e0b 100%);
+  --bg-gradient-earth: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   
-  /* Glass Effect */
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(16, 185, 129, 0.2);
-  --glass-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+  /* Textures et patterns (via background-image) */
+  --pattern-dots: radial-gradient(circle, #d6d3d1 1px, transparent 1px);
+  --pattern-grid: linear-gradient(90deg, #e7e5e4 1px, transparent 1px),
+                  linear-gradient(0deg, #e7e5e4 1px, transparent 1px);
   
-  /* Neutrals */
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Shadows - Plus prononcées */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.12);
   --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
   
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 250ms ease;
-  --transition-slow: 350ms ease;
-  
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 24px;
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
   --radius-full: 9999px;
   
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  --spacing-3xl: 64px;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --spacing-4xl: 6rem;
   
-  /* Font Sizes */
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -75,9 +89,14 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
   --text-5xl: 3rem;
+  
+  /* Transitions */
+  --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.5s ease;
 }
 
-/* Global Resets */
+/* Reset de base */
 * {
   margin: 0;
   padding: 0;
@@ -85,29 +104,18 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: var(--bg-light);
+  font-family: var(--font-sans);
   color: var(--gray-900);
+  background: var(--bg-cream);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Container */
 .container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
 }
-
-/* Utility Classes */
-.text-center {
-  text-align: center;
-}
-
-.mb-1 { margin-bottom: var(--spacing-sm); }
-.mb-2 { margin-bottom: var(--spacing-md); }
-.mb-3 { margin-bottom: var(--spacing-lg); }
-.mb-4 { margin-bottom: var(--spacing-xl); }
-
-.mt-1 { margin-top: var(--spacing-sm); }
-.mt-2 { margin-top: var(--spacing-md); }
-.mt-3 { margin-top: var(--spacing-lg); }
-.mt-4 { margin-top: var(--spacing-xl); }
