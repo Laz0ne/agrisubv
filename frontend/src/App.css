@@ -1,4 +1,4 @@
-/* App Styles - AgriSubv V2 - VERSION FINALE CORRIGÉE */
+/* App Styles - AgriSubv V2 - VERSION FINALE COMPLÈTE */
 
 * {
   box-sizing: border-box;
@@ -13,7 +13,10 @@
   overflow-x: hidden;
 }
 
-/* BANDE VERTE ANIMÉE */
+/* ========================================
+   BANDE VERTE ANIMÉE
+   ======================================== */
+
 .app .decorative-band {
   position: fixed;
   top: 80px;
@@ -42,7 +45,7 @@
 }
 
 /* ========================================
-   HERO AVEC PHOTO - PRIORITÉ MAXIMALE
+   HERO AVEC PHOTO LOCALE - GARANTIE VISIBLE
    ======================================== */
 
 .hero {
@@ -53,30 +56,23 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-3xl) 0;
-  /* PHOTO EN BACKGROUND DIRECT - Plus de conflit ! */
-  background-image: url('https://images.unsplash.com/photo-1625246508137-5fce4e6f0db0?w=1920&q=90') !important;
-  background-size: cover !important;
-  background-position: center 40% !important;
-  background-repeat: no-repeat !important;
+  /* Fallback couleur grise si photo ne charge pas */
+  background-color: #9ca3af;
+  /* Gradient sombre + Photo locale */
+  background-image: 
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.35) 0%,
+      rgba(0, 0, 0, 0.25) 50%,
+      rgba(0, 0, 0, 0.4) 100%
+    ),
+    url('/images/hero-farmer.jpg');
+  background-size: cover;
+  background-position: center 40%;
+  background-repeat: no-repeat;
 }
 
-/* OVERLAY SOMBRE POUR LISIBILITÉ */
-.hero::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.3) 50%,
-    rgba(0, 0, 0, 0.45) 100%
-  );
-  z-index: 1;
-}
-
+/* Contenu par-dessus la photo */
 .hero .container,
 .hero .hero-content,
 .hero .scroll-indicator {
@@ -113,7 +109,7 @@ section::before {
 }
 
 /* ========================================
-   CARDS - EFFET BRILLANCE RALENTI
+   CARDS - OVERFLOW VISIBLE POUR BADGES
    ======================================== */
 
 .card,
@@ -128,8 +124,10 @@ section::before {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* ← IMPORTANT : Permet aux badges de dépasser */
   border-radius: 1rem;
+  margin-top: 35px; /* ← IMPORTANT : Espace pour le badge */
+  padding: var(--spacing-xl);
 }
 
 .card:hover,
@@ -162,6 +160,7 @@ section::before {
   );
   transform: translateX(-100%) translateY(-100%) rotate(30deg);
   transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
 }
 
 .card:hover::before,
@@ -169,14 +168,24 @@ section::before {
   transform: translateX(100%) translateY(100%) rotate(30deg);
 }
 
-/* BADGES NUMÉROS - CENTRÉS EN HAUT */
+/* Contenu de la card au-dessus de l'effet brillance */
+.card > *,
+.step-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   BADGES NUMÉROS - BIEN VISIBLES
+   ======================================== */
+
 .step-number {
   position: absolute;
-  top: -20px;
+  top: -28px; /* ← SORTI DE LA CARD */
   left: 50%;
   transform: translateX(-50%);
-  width: 55px;
-  height: 55px;
+  width: 56px;
+  height: 56px;
   background: linear-gradient(135deg, #10b981 0%, #84cc16 100%);
   border-radius: 50%;
   display: flex;
@@ -186,7 +195,7 @@ section::before {
   font-weight: 800;
   color: white;
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-  z-index: 10;
+  z-index: 10; /* ← BIEN AU-DESSUS */
   border: 4px solid white;
   transition: transform 0.3s ease;
 }
@@ -381,6 +390,19 @@ html {
 }
 
 /* ========================================
+   CONTENEURS DE GRILLES DE CARDS
+   ======================================== */
+
+.steps-grid,
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-2xl);
+  margin-top: 50px; /* ← Espace pour les badges */
+  padding: 0 var(--spacing-lg);
+}
+
+/* ========================================
    RESPONSIVE
    ======================================== */
 
@@ -392,14 +414,15 @@ html {
   
   .hero {
     min-height: 60vh;
-    background-position: center 35% !important;
+    background-position: center 35%;
   }
   
   .step-number {
-    width: 45px;
-    height: 45px;
-    font-size: 1.4rem;
-    top: -15px;
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    top: -24px;
+    border: 3px solid white;
   }
   
   .btn-primary,
@@ -411,5 +434,26 @@ html {
   .btn-hero {
     padding: 1rem 2rem;
     font-size: 1.1rem;
+  }
+  
+  .card,
+  .step-card {
+    margin-top: 30px;
+  }
+  
+  .steps-grid,
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+    margin-top: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .step-number {
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+    top: -21px;
   }
 }
