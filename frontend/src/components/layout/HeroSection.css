@@ -1,4 +1,4 @@
-/* HeroSection Styles - AgriSubv V2 */
+/* HeroSection Styles - AgriSubv V2 - Sans gradients pour montrer la photo */
 
 .hero {
   position: relative;
@@ -19,28 +19,27 @@
   z-index: -1;
 }
 
+/* GRADIENT DÉSACTIVÉ pour montrer la photo de blé */
 .hero-gradient {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bg-gradient);
-  opacity: 0.1;
-  animation: pulse 8s ease-in-out infinite;
+  background: transparent;
+  opacity: 0;
+  animation: none;
 }
 
+/* PARTICLES DÉSACTIVÉS pour montrer la photo de blé */
 .hero-particles {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-  animation: float 20s ease-in-out infinite;
+  background-image: none;
+  animation: none;
 }
 
 @keyframes float {
@@ -53,6 +52,7 @@
   max-width: 800px;
   margin: 0 auto;
   z-index: 1;
+  position: relative;
 }
 
 .hero-title {
@@ -61,13 +61,15 @@
   line-height: 1.2;
   margin-bottom: var(--spacing-lg);
   color: var(--gray-900);
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
 }
 
 .hero-subtitle {
   font-size: var(--text-xl);
-  color: var(--gray-600);
+  color: var(--gray-700);
   margin-bottom: var(--spacing-2xl);
   font-weight: 500;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .btn-primary {
@@ -106,10 +108,34 @@
   transform: translateX(-50%);
   font-size: var(--text-3xl);
   color: var(--primary-green);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(10px);
+  }
 }
 
 @media (max-width: 768px) {
-  .hero { min-height: 60vh; }
-  .hero-title { font-size: var(--text-3xl); }
-  .hero-subtitle { font-size: var(--text-lg); }
+  .hero { 
+    min-height: 60vh;
+    padding: var(--spacing-2xl) 0;
+  }
+  
+  .hero-title { 
+    font-size: var(--text-3xl);
+  }
+  
+  .hero-subtitle { 
+    font-size: var(--text-lg);
+  }
+  
+  .btn-primary {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--text-base);
+  }
 }
