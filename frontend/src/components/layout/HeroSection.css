@@ -1,4 +1,4 @@
-/* HeroSection Styles - AgriSubv V2 - CORRIGÉ */
+/* HeroSection Styles - AgriSubv V2 - VERSION COMPLÈTE CORRIGÉE */
 
 .hero {
   position: relative;
@@ -12,14 +12,26 @@
 
 .hero-content {
   text-align: center;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   position: relative;
+  z-index: 3;
   padding: 0 var(--spacing-lg);
 }
 
+/* LOGO ANIMÉ */
+.hero-title .animate-fadeIn {
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
 .hero-title {
-  font-size: var(--text-5xl);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: var(--spacing-lg);
@@ -31,7 +43,7 @@
 }
 
 .hero-subtitle {
-  font-size: var(--text-xl);
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
   color: white;
   margin-bottom: var(--spacing-2xl);
   font-weight: 600;
@@ -40,17 +52,70 @@
     0 4px 8px rgba(0, 0, 0, 0.6);
 }
 
+/* BOUTON HERO - GRAND ET STYLÉ */
 .btn-hero {
   background: linear-gradient(135deg, #10b981 0%, #84cc16 100%);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 1.2rem 3rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 
+    0 8px 25px rgba(16, 185, 129, 0.4),
+    0 0 0 0 rgba(16, 185, 129, 0.7);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Effet de brillance sur le bouton */
+.btn-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.btn-hero:hover::before {
+  left: 100%;
 }
 
 .btn-hero:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 
+    0 12px 35px rgba(16, 185, 129, 0.5),
+    0 0 0 8px rgba(16, 185, 129, 0.1);
   border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px) scale(1.02);
 }
 
+.btn-hero:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.btn-hero .arrow {
+  transition: transform 0.3s ease;
+  font-size: 1.5rem;
+}
+
+.btn-hero:hover .arrow {
+  transform: translateX(5px);
+}
+
+/* FLÈCHE SCROLL */
 .scroll-indicator {
   position: absolute;
   bottom: var(--spacing-2xl);
@@ -60,6 +125,7 @@
   color: white;
   animation: bounce 2s ease-in-out infinite;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  z-index: 3;
 }
 
 @keyframes bounce {
@@ -71,18 +137,16 @@
   }
 }
 
+/* RESPONSIVE */
 @media (max-width: 768px) {
   .hero { 
     min-height: 60vh;
     padding: var(--spacing-2xl) 0;
   }
   
-  .hero-title { 
-    font-size: var(--text-3xl);
-  }
-  
-  .hero-subtitle { 
-    font-size: var(--text-lg);
+  .btn-hero {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
   }
   
   .scroll-indicator {
