@@ -1,13 +1,22 @@
-/* Header Styles - AgriSubv V2 */
+/* Header Styles - AgriSubv V2 - Sticky Header */
 
 .header {
-  position: sticky;
+  position: fixed; /* Changé de sticky à fixed */
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--beige-200);
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid rgba(132, 204, 22, 0.2);
+  box-shadow: 0 2px 12px rgba(132, 204, 22, 0.08);
+  transition: all 0.3s ease;
+}
+
+/* Effet au scroll */
+.header.scrolled {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 20px rgba(132, 204, 22, 0.12);
 }
 
 .header-container {
@@ -29,14 +38,23 @@
   color: var(--gray-900);
   cursor: pointer;
   transition: var(--transition-base);
+  user-select: none;
 }
 
 .header-logo:hover {
-  color: var(--primary-green);
+  color: #84cc16;
+  transform: scale(1.05);
 }
 
 .logo-icon {
   font-size: var(--text-2xl);
+  animation: sway 3s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
 }
 
 .header-nav {
@@ -58,6 +76,7 @@
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
   position: relative;
+  font-family: var(--font-sans);
 }
 
 .nav-link::after {
@@ -67,22 +86,27 @@
   left: 50%;
   transform: translateX(-50%);
   width: 0;
-  height: 2px;
-  background: var(--primary-green);
+  height: 3px;
+  background: linear-gradient(90deg, #10b981 0%, #84cc16 100%);
   transition: var(--transition-base);
+  border-radius: 2px;
 }
 
 .nav-link:hover {
-  color: var(--primary-green);
-  background: rgba(16, 185, 129, 0.05);
+  color: #84cc16;
+  background: rgba(132, 204, 22, 0.05);
 }
 
 .nav-link:hover::after {
   width: 80%;
 }
 
+.nav-link:active {
+  transform: scale(0.95);
+}
+
 .btn-account {
-  background: var(--primary-green);
+  background: linear-gradient(135deg, #10b981 0%, #84cc16 100%);
   color: white;
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -90,30 +114,60 @@
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-base);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgba(132, 204, 22, 0.3);
+  font-family: var(--font-sans);
+  white-space: nowrap;
 }
 
 .btn-account:hover {
-  background: var(--primary-green-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
+}
+
+.btn-account:active {
+  transform: translateY(0);
+}
+
+/* Mobile Menu Toggle (pour future implémentation) */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: var(--text-2xl);
+  cursor: pointer;
+  color: var(--gray-700);
 }
 
 @media (max-width: 768px) {
   .header-container {
     flex-wrap: wrap;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  .header-logo {
+    font-size: var(--text-lg);
+  }
+  
+  .logo-icon {
+    font-size: var(--text-xl);
   }
   
   .header-nav {
     order: 3;
     width: 100%;
     justify-content: space-around;
-    padding-top: var(--spacing-md);
-    border-top: 1px solid var(--beige-200);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid rgba(132, 204, 22, 0.2);
+    gap: var(--spacing-sm);
   }
   
   .nav-link {
     font-size: var(--text-sm);
     padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  .btn-account {
+    font-size: var(--text-sm);
+    padding: var(--spacing-xs) var(--spacing-md);
   }
 }
