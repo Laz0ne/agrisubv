@@ -116,83 +116,92 @@ class ProfilAgriculteurLegacy(BaseModel):
 
 
 def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteurV2:
-    """Convertit l'ancien format en V2"""
+    """Convertit l'ancien format en V2 avec mappings directs vers Enums"""
     
-    # Mapping des statuts
+    # Mapping direct String → Enum (pas de string intermédiaire)
     statut_mapping = {
-        "Exploitation individuelle": "INDIVIDUEL",
-        "EARL": "EARL",
-        "GAEC": "GAEC",
-        "SCEA": "SCEA",
-        "SA": "SA",
-        "CUMA": "CUMA",
-        "Coopérative": "COOPERATIVE",
-        "GIE": "GIE",
-        "Autre": "AUTRE"
+        "Exploitation individuelle": StatutJuridique.INDIVIDUEL,
+        "EARL": StatutJuridique.EARL,
+        "GAEC": StatutJuridique.GAEC,
+        "SCEA": StatutJuridique.SCEA,
+        "SA": StatutJuridique.SA,
+        "CUMA": StatutJuridique.CUMA,
+        "Coopérative": StatutJuridique.COOPERATIVE,
+        "GIE": StatutJuridique.GIE,
+        "Autre": StatutJuridique.AUTRE
     }
     
-    # Mapping des productions
+    # Mapping productions String → Enum DIRECT
     production_mapping = {
-        "Céréales": "CEREALES",
-        "Maraîchage": "MARAICHAGE",
-        "Viticulture": "VITICULTURE",
-        "Arboriculture": "ARBORICULTURE",
-        "Élevage bovin": "ELEVAGE_BOVIN",
-        "Élevage ovin": "ELEVAGE_OVIN",
-        "Élevage caprin": "ELEVAGE_CAPRIN",
-        "Élevage porcin": "ELEVAGE_PORCIN",
-        "Élevage avicole": "ELEVAGE_AVICOLE",
-        "Élevage laitier": "ELEVAGE_LAITIER",
-        "Grandes cultures": "GRANDES_CULTURES",
-        "Horticulture": "HORTICULTURE",
-        "Apiculture": "APICULTURE",
-        "Aquaculture": "AQUACULTURE"
+        "Céréales": TypeProduction.CEREALES,
+        "Maraîchage": TypeProduction.MARAICHAGE,
+        "Viticulture": TypeProduction.VITICULTURE,
+        "Arboriculture": TypeProduction.ARBORICULTURE,
+        "Élevage bovin": TypeProduction.ELEVAGE_BOVIN,
+        "Élevage ovin": TypeProduction.ELEVAGE_OVIN,
+        "Élevage caprin": TypeProduction.ELEVAGE_CAPRIN,
+        "Élevage porcin": TypeProduction.ELEVAGE_PORCIN,
+        "Élevage avicole": TypeProduction.ELEVAGE_AVICOLE,
+        "Élevage laitier": TypeProduction.ELEVAGE_LAITIER,
+        "Grandes cultures": TypeProduction.GRANDES_CULTURES,
+        "Horticulture": TypeProduction.HORTICULTURE,
+        "Apiculture": TypeProduction.APICULTURE,
+        "Aquaculture": TypeProduction.AQUACULTURE
     }
     
-    # Mapping des projets
+    # Mapping projets String → Enum DIRECT
     projet_mapping = {
-        "Installation": "INSTALLATION",
-        "Conversion bio": "CONVERSION_BIO",
-        "Modernisation": "MODERNISATION",
-        "Diversification": "DIVERSIFICATION",
-        "Irrigation": "IRRIGATION",
-        "Bâtiment": "BATIMENT",
-        "Matériel": "MATERIEL",
-        "Énergie": "ENERGIE",
-        "Environnement": "ENVIRONNEMENT",
-        "Formation": "FORMATION",
-        "Commercialisation": "COMMERCIALISATION",
-        "Numérique": "NUMERIQUE",
-        "Bien-être animal": "BIEN_ETRE_ANIMAL"
+        "Installation": TypeProjet.INSTALLATION,
+        "Conversion bio": TypeProjet.CONVERSION_BIO,
+        "Modernisation": TypeProjet.MODERNISATION,
+        "Diversification": TypeProjet.DIVERSIFICATION,
+        "Irrigation": TypeProjet.IRRIGATION,
+        "Bâtiment": TypeProjet.BATIMENT,
+        "Matériel": TypeProjet.MATERIEL,
+        "Énergie": TypeProjet.ENERGIE,
+        "Environnement": TypeProjet.ENVIRONNEMENT,
+        "Formation": TypeProjet.FORMATION,
+        "Commercialisation": TypeProjet.COMMERCIALISATION,
+        "Numérique": TypeProjet.NUMERIQUE,
+        "Bien-être animal": TypeProjet.BIEN_ETRE_ANIMAL
     }
     
     # Convertir statut
-    statut_key = statut_mapping.get(legacy.statut_juridique, "AUTRE")
-    try:
-        statut = StatutJuridique[statut_key]
-    except KeyError:
-        logger.warning(f"Statut inconnu: {legacy.statut_juridique}, utilisation de AUTRE")
-        statut = StatutJuridique.AUTRE
+    statut = statut_mapping.get(legacy.statut_juridique, StatutJuridique.AUTRE)
+    if legacy.statut_juridique not in statut_mapping:
+        logger.warning(f"⚠️  Statut inconnu '{legacy.statut_juridique}', utilisation de AUTRE")
     
-    # Convertir productions
-    productions_v2 = []
-    for prod in legacy.productions:
-        prod_key = production_mapping.get(prod)
-        if prod_key:
-            try:
-                productions_v2.append(TypeProduction[prod_key])
-            except KeyError:
-                logger.warning(f"Production inconnue: {prod}")
+    # Convertir productions (list comprehension filtrée)
+    productions_v2 = [
+        production_mapping[prod] 
+        for prod in legacy.productions 
+        if prod in production_mapping
+    ]
     
-    # Convertir projets
-    projets_v2 = []
-    for proj in legacy.projets:
-        proj_key = projet_mapping.get(proj)
-        if proj_key:
-            try:
-                projets_v2.append(TypeProjet[proj_key])
-            except KeyError:
-                logger.warning(f"Projet inconnu: {proj}")
+    # Logger les productions ignorées
+    ignored_prods = [p for p in legacy.productions if p not in production_mapping]
+    if ignored_prods:
+        logger.warning(f"⚠️  Productions ignorées: {ignored_prods}")
+    
+    # Convertir projets (list comprehension filtrée)
+    projets_v2 = [
+        projet_mapping[proj] 
+        for proj in legacy.projets 
+        if proj in projet_mapping
+    ]
+    
+    # Logger les projets ignorés
+    ignored_projs = [p for p in legacy.projets if p not in projet_mapping]
+    if ignored_projs:
+        logger.warning(f"⚠️  Projets ignorés: {ignored_projs}")
+    
+    # Déterminer si bio
+    is_bio = any(
+        label.lower() in ["agriculture biologique", "bio", "ab"] 
+        for label in legacy.labels
+    )
+    
+    logger.info(f"✅ Conversion: {len(productions_v2)} productions, {len(projets_v2)} projets")
     
     # Créer le profil V2
     return ProfilAgriculteurV2(
@@ -201,13 +210,13 @@ def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteurV2
         departement=legacy.departement or "00",
         statut_juridique=statut,
         sau_totale=legacy.superficie_ha,
-        sau_bio=legacy.superficie_ha if "Agriculture Biologique" in legacy.labels or "Bio" in legacy.labels else 0,
+        sau_bio=legacy.superficie_ha if is_bio else 0.0,
         productions=productions_v2,
         production_principale=productions_v2[0] if productions_v2 else None,
         age=legacy.age_exploitant,
         jeune_agriculteur=legacy.jeune_agriculteur,
         labels=legacy.labels,
-        label_bio="Agriculture Biologique" in legacy.labels or "Bio" in legacy.labels,
+        label_bio=is_bio,
         projets_en_cours=projets_v2,
         created_at=legacy.created_at
     )
@@ -429,14 +438,15 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
     try:
         # Détecter le format (V2 a "sau_totale", ancien a "superficie_ha")
         if "superficie_ha" in profil_data:
-            logger.info("🔄 Conversion ancien format → V2")
+            logger.info("🔄 Détection format legacy, conversion en V2...")
             legacy_profil = ProfilAgriculteurLegacy(**profil_data)
             profil = convert_legacy_to_v2(legacy_profil)
+            logger.info(f"✅ Conversion réussie")
         else:
-            logger.info("✅ Format V2 détecté")
+            logger.info("✅ Format V2 détecté directement")
             profil = ProfilAgriculteurV2(**profil_data)
         
-        logger.info(f"🎯 Matching V2 pour profil: {profil.region}, {profil.statut_juridique.value}")
+        logger.info(f"🎯 Matching V2 pour: {profil.region}, {profil.statut_juridique.value}")
         
         # Récupérer toutes les aides V2 actives
         aides_cursor = db.aides_v2.find({"statut": "active"})
