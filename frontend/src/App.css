@@ -1,4 +1,4 @@
-/* App Styles - AgriSubv V2 - VERSION FINALE COMPLÈTE */
+/* App Styles - AgriSubv V2 - VERSION FINALE PROPRE */
 
 * {
   box-sizing: border-box;
@@ -45,7 +45,7 @@
 }
 
 /* ========================================
-   HERO AVEC PHOTO LOCALE - GARANTIE VISIBLE
+   HERO AVEC PHOTO MAGNIFIQUE
    ======================================== */
 
 .hero {
@@ -56,9 +56,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-3xl) 0;
-  /* Fallback couleur grise si photo ne charge pas */
   background-color: #9ca3af;
-  /* Gradient sombre + Photo locale */
   background-image: 
     linear-gradient(
       180deg,
@@ -72,7 +70,6 @@
   background-repeat: no-repeat;
 }
 
-/* Contenu par-dessus la photo */
 .hero .container,
 .hero .hero-content,
 .hero .scroll-indicator {
@@ -109,7 +106,7 @@ section::before {
 }
 
 /* ========================================
-   CARDS - OVERFLOW VISIBLE POUR BADGES
+   CARDS - EFFET BRILLANCE PROPRE
    ======================================== */
 
 .card,
@@ -124,9 +121,9 @@ section::before {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: visible; /* ← IMPORTANT : Permet aux badges de dépasser */
+  overflow: visible;
   border-radius: 1rem;
-  margin-top: 35px; /* ← IMPORTANT : Espace pour le badge */
+  margin-top: 35px;
   padding: var(--spacing-xl);
 }
 
@@ -139,49 +136,47 @@ section::before {
   background: white;
 }
 
-/* EFFET DE BRILLANCE - RALENTI À 1.5s */
-.card::before,
-.step-card::before {
+/* EFFET BRILLANCE - PROPRE ET SUBTIL */
+.card::after,
+.step-card::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(
-    115deg,
+    90deg,
     transparent 0%,
-    transparent 38%,
-    rgba(132, 204, 22, 0.2) 48%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(132, 204, 22, 0.2) 52%,
-    transparent 62%,
+    rgba(132, 204, 22, 0.15) 40%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(132, 204, 22, 0.15) 60%,
     transparent 100%
   );
-  transform: translateX(-100%) translateY(-100%) rotate(30deg);
-  transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 0;
+  transition: left 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 1rem;
 }
 
-.card:hover::before,
-.step-card:hover::before {
-  transform: translateX(100%) translateY(100%) rotate(30deg);
+.card:hover::after,
+.step-card:hover::after {
+  left: 100%;
 }
 
-/* Contenu de la card au-dessus de l'effet brillance */
-.card > *,
-.step-card > * {
+.card > *:not(.step-number),
+.step-card > *:not(.step-number) {
   position: relative;
-  z-index: 1;
+  z-index: 6;
 }
 
 /* ========================================
-   BADGES NUMÉROS - BIEN VISIBLES
+   BADGES NUMÉROS
    ======================================== */
 
 .step-number {
   position: absolute;
-  top: -28px; /* ← SORTI DE LA CARD */
+  top: -28px;
   left: 50%;
   transform: translateX(-50%);
   width: 56px;
@@ -195,7 +190,7 @@ section::before {
   font-weight: 800;
   color: white;
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-  z-index: 10; /* ← BIEN AU-DESSUS */
+  z-index: 10;
   border: 4px solid white;
   transition: transform 0.3s ease;
 }
@@ -257,7 +252,6 @@ section::before {
   transform: translateY(-1px) scale(1.01);
 }
 
-/* BOUTON HERO - GRAND */
 .btn-hero {
   padding: 1.2rem 3rem;
   font-size: 1.25rem;
@@ -285,7 +279,6 @@ section::before {
   transform: translateX(5px);
 }
 
-/* BOUTON SECONDAIRE */
 .btn-secondary {
   background: white;
   color: var(--gray-700);
@@ -389,16 +382,12 @@ html {
   scroll-padding-top: 100px;
 }
 
-/* ========================================
-   CONTENEURS DE GRILLES DE CARDS
-   ======================================== */
-
 .steps-grid,
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--spacing-2xl);
-  margin-top: 50px; /* ← Espace pour les badges */
+  margin-top: 50px;
   padding: 0 var(--spacing-lg);
 }
 
@@ -446,14 +435,5 @@ html {
     grid-template-columns: 1fr;
     gap: var(--spacing-xl);
     margin-top: 40px;
-  }
-}
-
-@media (max-width: 480px) {
-  .step-number {
-    width: 42px;
-    height: 42px;
-    font-size: 1.3rem;
-    top: -21px;
   }
 }
