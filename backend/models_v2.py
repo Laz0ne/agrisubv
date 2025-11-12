@@ -74,261 +74,230 @@ class TypeMontant(str, Enum):
 class CriteresEligibilite(BaseModel):
     """Critères d'éligibilité détaillés pour une aide"""
     
-    # Critères géographiques
-    regions: List[str] = Field(default_factory=list, description="Régions éligibles")
-    departements: List[str] = Field(default_factory=list, description="Départements éligibles")
-    zones_specifiques: List[str] = Field(default_factory=list, description="Zones spécifiques (montagne, défavorisée, etc.)")
+    regions: List[str] = Field(default_factory=list)
+    departements: List[str] = Field(default_factory=list)
+    zones_specifiques: List[str] = Field(default_factory=list)
     
-    # Critères démographiques
-    age_min: Optional[int] = Field(None, description="Âge minimum de l'exploitant")
-    age_max: Optional[int] = Field(None, description="Âge maximum de l'exploitant")
-    jeune_agriculteur: Optional[bool] = Field(None, description="Réservé aux jeunes agriculteurs")
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    jeune_agriculteur: Optional[bool] = None
     
-    # Critères d'exploitation
-    superficie_min: Optional[float] = Field(None, description="Superficie minimum en hectares")
-    superficie_max: Optional[float] = Field(None, description="Superficie maximum en hectares")
-    cheptel_min: Optional[int] = Field(None, description="Nombre minimum d'animaux")
-    cheptel_max: Optional[int] = Field(None, description="Nombre maximum d'animaux")
+    superficie_min: Optional[float] = None
+    superficie_max: Optional[float] = None
+    cheptel_min: Optional[int] = None
+    cheptel_max: Optional[int] = None
     
-    # Critères économiques
-    ca_min: Optional[float] = Field(None, description="Chiffre d'affaires minimum")
-    ca_max: Optional[float] = Field(None, description="Chiffre d'affaires maximum")
+    ca_min: Optional[float] = None
+    ca_max: Optional[float] = None
     
-    # Critères de production et projet
-    types_production: List[TypeProduction] = Field(default_factory=list, description="Types de production éligibles")
-    types_projets: List[TypeProjet] = Field(default_factory=list, description="Types de projets éligibles")
+    types_production: List[TypeProduction] = Field(default_factory=list)
+    types_projets: List[TypeProjet] = Field(default_factory=list)
     
-    # Critères de statut et labels
-    statuts_juridiques: List[StatutJuridique] = Field(default_factory=list, description="Statuts juridiques acceptés")
-    labels_requis: List[str] = Field(default_factory=list, description="Labels requis (Bio, HVE, etc.)")
-    labels_bonus: List[str] = Field(default_factory=list, description="Labels donnant des points bonus")
+    statuts_juridiques: List[StatutJuridique] = Field(default_factory=list)
+    labels_requis: List[str] = Field(default_factory=list)
+    labels_bonus: List[str] = Field(default_factory=list)
     
-    # Critères additionnels
-    premiere_installation: Optional[bool] = Field(None, description="Première installation requise")
-    en_difficulte: Optional[bool] = Field(None, description="Exploitation en difficulté")
-    projets_collectifs: Optional[bool] = Field(None, description="Projets collectifs uniquement")
+    premiere_installation: Optional[bool] = None
+    en_difficulte: Optional[bool] = None
+    projets_collectifs: Optional[bool] = None
 
 
 class MontantAide(BaseModel):
     """Montant et modalités de l'aide"""
     
-    type_montant: TypeMontant = Field(TypeMontant.FORFAITAIRE, description="Type de montant")
+    type_montant: TypeMontant = TypeMontant.FORFAITAIRE
     
-    # Montants forfaitaires
-    montant_min: Optional[float] = Field(None, description="Montant minimum en euros")
-    montant_max: Optional[float] = Field(None, description="Montant maximum en euros")
-    montant_fixe: Optional[float] = Field(None, description="Montant fixe en euros")
+    montant_min: Optional[float] = None
+    montant_max: Optional[float] = None
+    montant_fixe: Optional[float] = None
     
-    # Pourcentages
-    taux_min: Optional[float] = Field(None, description="Taux minimum en pourcentage")
-    taux_max: Optional[float] = Field(None, description="Taux maximum en pourcentage")
+    taux_min: Optional[float] = None
+    taux_max: Optional[float] = None
     
-    # Plafonds
-    plafond: Optional[float] = Field(None, description="Plafond en euros")
-    plancher: Optional[float] = Field(None, description="Plancher en euros")
+    plafond: Optional[float] = None
+    plancher: Optional[float] = None
     
-    # Par unité (surface, tête, etc.)
-    montant_par_unite: Optional[float] = Field(None, description="Montant par unité (ha, tête, etc.)")
-    unite: Optional[str] = Field(None, description="Unité de mesure (ha, tête, kW, etc.)")
+    montant_par_unite: Optional[float] = None
+    unite: Optional[str] = None
     
-    # Informations complémentaires
-    description: Optional[str] = Field(None, description="Description du calcul du montant")
-    conditions_particulieres: Optional[str] = Field(None, description="Conditions particulières")
+    description: Optional[str] = None
+    conditions_particulieres: Optional[str] = None
 
-
-# ============ MODÈLE PRINCIPAL ============
 
 class AideAgricoleV2(BaseModel):
     """Modèle V2 optimisé pour les aides agricoles"""
     
-    # Identifiants
-    aid_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Identifiant unique")
-    id_externe: Optional[str] = Field(None, description="ID dans la source externe")
+    aid_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id_externe: Optional[str] = None
     
-    # Informations de base
-    titre: str = Field(..., description="Titre de l'aide")
-    description: str = Field("", description="Description détaillée")
-    organisme: str = Field(..., description="Organisme porteur")
-    programme: str = Field("", description="Programme rattaché")
+    titre: str
+    description: str = ""
+    organisme: str
+    programme: str = ""
     
-    # Source et métadonnées
-    source: str = Field("manual", description="Source de l'aide (manual, aides_territoires, datagouv_pac)")
-    source_url: str = Field("", description="URL de la source")
+    source: str = "manual"
+    source_url: str = ""
     derniere_maj: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
-    # Dates importantes
-    date_debut: Optional[str] = Field(None, description="Date de début de validité")
-    date_fin: Optional[str] = Field(None, description="Date de fin de validité")
-    date_limite_depot: Optional[str] = Field(None, description="Date limite de dépôt")
+    date_debut: Optional[str] = None
+    date_fin: Optional[str] = None
+    date_limite_depot: Optional[str] = None
     
-    # Statut
-    statut: str = Field("active", description="Statut de l'aide (active, inactive, expiree)")
+    statut: str = "active"
     
-    # Critères et montant
     criteres: CriteresEligibilite = Field(default_factory=CriteresEligibilite)
     montant: MontantAide = Field(default_factory=MontantAide)
     
-    # Conditions et informations complémentaires
-    conditions_eligibilite: str = Field("", description="Conditions d'éligibilité en texte")
-    demarche: str = Field("", description="Démarche à suivre")
-    contact: Optional[str] = Field(None, description="Contact pour l'aide")
+    conditions_eligibilite: str = ""
+    demarche: str = ""
+    contact: Optional[str] = None
     
-    # Liens
-    lien_officiel: str = Field("", description="Lien vers la page officielle")
-    lien_dossier: Optional[str] = Field(None, description="Lien vers le dossier de demande")
+    lien_officiel: str = ""
+    lien_dossier: Optional[str] = None
     
-    # Métadonnées de qualité
-    confiance: float = Field(1.0, ge=0.0, le=1.0, description="Niveau de confiance dans les données")
-    tags: List[str] = Field(default_factory=list, description="Tags pour recherche et matching")
+    confiance: float = 1.0
+    tags: List[str] = Field(default_factory=list)
     
-    # Données brutes (pour debug)
-    raw_data: Optional[Dict[str, Any]] = Field(None, description="Données brutes de la source")
-    
-    @field_validator('titre')
-    @classmethod
-    def titre_non_vide(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("Le titre ne peut pas être vide")
-        return v.strip()
-    
-    @field_validator('statut')
-    @classmethod
-    def statut_valide(cls, v: str) -> str:
-        statuts_valides = ['active', 'inactive', 'expiree']
-        if v not in statuts_valides:
-            raise ValueError(f"Statut doit être parmi: {statuts_valides}")
-        return v
-    
-    @field_validator('confiance')
-    @classmethod
-    def confiance_entre_0_et_1(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError("La confiance doit être entre 0.0 et 1.0")
-        return v
+    raw_data: Optional[Dict[str, Any]] = None
 
 
-# ============ MODÈLE PROFIL AGRICULTEUR ============
+# ============ MODÈLE PROFIL AGRICULTEUR AVEC VALIDATEURS ============
 
 class ProfilAgriculteur(BaseModel):
     """Profil complet d'un agriculteur pour le matching"""
     
-    # ✅ CONFIGURATION PYDANTIC V2 POUR ACCEPTER LES ENUMS DÉJÀ CRÉÉS
     model_config = ConfigDict(
-        use_enum_values=False,  # Garde les instances Enum (pas juste leurs valeurs)
-        arbitrary_types_allowed=True,  # Permet les types personnalisés
-        validate_assignment=False  # Pas de revalidation lors de l'assignation
+        arbitrary_types_allowed=True,
+        validate_assignment=False
     )
     
-    # Identifiant
     profil_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     
-    # Informations géographiques
-    region: str = Field(..., description="Région de l'exploitation")
-    departement: str = Field(..., description="Département")
-    commune: Optional[str] = Field(None, description="Commune")
-    code_postal: Optional[str] = Field(None, description="Code postal")
-    zone_montagne: bool = Field(False, description="Située en zone de montagne")
-    zone_defavorisee: bool = Field(False, description="Située en zone défavorisée")
+    region: str
+    departement: str
+    commune: Optional[str] = None
+    code_postal: Optional[str] = None
+    zone_montagne: bool = False
+    zone_defavorisee: bool = False
     
-    # Informations exploitant
-    age: Optional[int] = Field(None, description="Âge de l'exploitant")
-    jeune_agriculteur: bool = Field(False, description="Jeune agriculteur (< 40 ans)")
-    premiere_installation: bool = Field(False, description="Première installation")
-    niveau_formation: Optional[str] = Field(None, description="Niveau de formation agricole")
+    age: Optional[int] = None
+    jeune_agriculteur: bool = False
+    premiere_installation: bool = False
+    niveau_formation: Optional[str] = None
     
-    # Informations exploitation
-    statut_juridique: StatutJuridique = Field(..., description="Statut juridique")
-    annee_installation: Optional[int] = Field(None, description="Année d'installation")
+    statut_juridique: StatutJuridique
+    annee_installation: Optional[int] = None
     
-    # Surfaces et production
-    sau_totale: float = Field(..., ge=0, description="Surface agricole utile totale (ha)")
-    sau_bio: float = Field(0, ge=0, description="Surface en agriculture biologique (ha)")
-    sau_en_conversion: float = Field(0, ge=0, description="Surface en conversion bio (ha)")
+    sau_totale: float = Field(ge=0)
+    sau_bio: float = Field(default=0, ge=0)
+    sau_en_conversion: float = Field(default=0, ge=0)
     
-    # Productions
-    productions: List[TypeProduction] = Field(default_factory=list, description="Types de production")
-    production_principale: Optional[TypeProduction] = Field(None, description="Production principale")
-    cultures_details: Optional[Dict[str, float]] = Field(None, description="Détail des surfaces par culture")
+    # ✅ AVEC VALIDATEUR PERSONNALISÉ
+    productions: List[TypeProduction] = Field(default_factory=list)
+    production_principale: Optional[TypeProduction] = None
+    cultures_details: Optional[Dict[str, float]] = None
     
-    # Élevage
-    a_elevage: bool = Field(False, description="Possède un élevage")
-    nb_bovins: int = Field(0, ge=0, description="Nombre de bovins")
-    nb_ovins: int = Field(0, ge=0, description="Nombre d'ovins")
-    nb_caprins: int = Field(0, ge=0, description="Nombre de caprins")
-    nb_porcins: int = Field(0, ge=0, description="Nombre de porcins")
-    nb_volailles: int = Field(0, ge=0, description="Nombre de volailles")
+    a_elevage: bool = False
+    nb_bovins: int = Field(default=0, ge=0)
+    nb_ovins: int = Field(default=0, ge=0)
+    nb_caprins: int = Field(default=0, ge=0)
+    nb_porcins: int = Field(default=0, ge=0)
+    nb_volailles: int = Field(default=0, ge=0)
     
-    # Labels et certifications
-    labels: List[str] = Field(default_factory=list, description="Labels et certifications")
-    label_bio: bool = Field(False, description="Certifié Agriculture Biologique")
-    label_hve: bool = Field(False, description="Certifié Haute Valeur Environnementale")
+    labels: List[str] = Field(default_factory=list)
+    label_bio: bool = False
+    label_hve: bool = False
     
-    # Économie
-    chiffre_affaires: Optional[float] = Field(None, ge=0, description="Chiffre d'affaires annuel")
-    en_difficulte: bool = Field(False, description="Exploitation en difficulté")
+    chiffre_affaires: Optional[float] = Field(default=None, ge=0)
+    en_difficulte: bool = False
     
-    # Projets et investissements
-    projets_en_cours: List[TypeProjet] = Field(default_factory=list, description="Projets en cours ou envisagés")
-    projets_collectifs: bool = Field(False, description="Participe à des projets collectifs")
-    budget_projet: Optional[float] = Field(None, description="Budget du projet envisagé")
+    # ✅ AVEC VALIDATEUR PERSONNALISÉ
+    projets_en_cours: List[TypeProjet] = Field(default_factory=list)
+    projets_collectifs: bool = False
+    budget_projet: Optional[float] = None
     
-    # Métadonnées
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
-    @field_validator('sau_bio', 'sau_en_conversion')
+    # ✅ VALIDATEUR POUR PRODUCTIONS
+    @field_validator('productions', mode='before')
     @classmethod
-    def surface_bio_coherente(cls, v: float, info) -> float:
-        if 'sau_totale' in info.data and v > info.data['sau_totale']:
-            raise ValueError("La surface bio/conversion ne peut pas dépasser la SAU totale")
-        return v
+    def validate_productions(cls, v):
+        """Accepte les Enums TypeProduction déjà créés OU les strings"""
+        if not v:
+            return []
+        
+        result = []
+        for item in v:
+            if isinstance(item, TypeProduction):
+                # Déjà un Enum, on garde tel quel
+                result.append(item)
+            elif isinstance(item, str):
+                # String, on cherche l'Enum correspondant
+                for prod_enum in TypeProduction:
+                    if prod_enum.value == item:
+                        result.append(prod_enum)
+                        break
+        
+        return result
+    
+    # ✅ VALIDATEUR POUR PROJETS
+    @field_validator('projets_en_cours', mode='before')
+    @classmethod
+    def validate_projets(cls, v):
+        """Accepte les Enums TypeProjet déjà créés OU les strings"""
+        if not v:
+            return []
+        
+        result = []
+        for item in v:
+            if isinstance(item, TypeProjet):
+                # Déjà un Enum, on garde tel quel
+                result.append(item)
+            elif isinstance(item, str):
+                # String, on cherche l'Enum correspondant
+                for proj_enum in TypeProjet:
+                    if proj_enum.value == item:
+                        result.append(proj_enum)
+                        break
+        
+        return result
 
-
-# ============ MODÈLE RÉSULTAT MATCHING ============
 
 class DetailCritere(BaseModel):
     """Détail d'un critère de matching"""
-    nom: str = Field(..., description="Nom du critère")
-    valide: bool = Field(..., description="Critère validé ou non")
-    bloquant: bool = Field(False, description="Critère bloquant")
-    points: float = Field(0.0, description="Points obtenus")
-    points_max: float = Field(0.0, description="Points maximum")
-    explication: str = Field("", description="Explication détaillée")
+    nom: str
+    valide: bool
+    bloquant: bool = False
+    points: float = 0.0
+    points_max: float = 0.0
+    explication: str = ""
 
 
 class ResultatMatching(BaseModel):
     """Résultat du matching entre un profil et une aide"""
     
-    # Identifiants
-    aide_id: str = Field(..., description="ID de l'aide")
-    profil_id: str = Field(..., description="ID du profil")
+    aide_id: str
+    profil_id: str
     
-    # Score global
-    score: float = Field(..., ge=0.0, le=100.0, description="Score global de matching (0-100)")
-    eligible: bool = Field(..., description="Éligible ou non (score >= seuil)")
+    score: float = Field(ge=0.0, le=100.0)
+    eligible: bool
     
-    # Détails par catégorie de critères
     details_criteres: List[DetailCritere] = Field(default_factory=list)
     
-    # Catégorisation
-    criteres_valides: int = Field(0, description="Nombre de critères validés")
-    criteres_total: int = Field(0, description="Nombre total de critères")
-    criteres_bloquants_ko: List[str] = Field(default_factory=list, description="Critères bloquants non validés")
+    criteres_valides: int = 0
+    criteres_total: int = 0
+    criteres_bloquants_ko: List[str] = Field(default_factory=list)
     
-    # Montant estimé
-    montant_estime_min: Optional[float] = Field(None, description="Montant minimum estimé")
-    montant_estime_max: Optional[float] = Field(None, description="Montant maximum estimé")
+    montant_estime_min: Optional[float] = None
+    montant_estime_max: Optional[float] = None
     
-    # Résumé et recommandations
-    resume: str = Field("", description="Résumé du matching")
-    recommandations: List[str] = Field(default_factory=list, description="Recommandations pour améliorer l'éligibilité")
+    resume: str = ""
+    recommandations: List[str] = Field(default_factory=list)
     
-    # Métadonnées
     date_matching: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     @field_validator('score')
     @classmethod
     def score_valide(cls, v: float) -> float:
-        if not 0.0 <= v <= 100.0:
-            raise ValueError("Le score doit être entre 0 et 100")
         return round(v, 2)
