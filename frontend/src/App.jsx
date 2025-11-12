@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from './components/layout/Header';
 import { HeroSection } from './components/layout/HeroSection';
 import { HowItWorks } from './components/home/HowItWorks';
+import { FAQ } from './components/home/FAQ';
 import { Footer } from './components/layout/Footer';
 import { WizardForm } from './components/wizard/WizardForm';
 import { ResultsSection } from './components/results/ResultsSection';
@@ -67,6 +68,7 @@ function App() {
         <>
           <HeroSection onStart={handleStartSimulation} />
           <HowItWorks onStart={handleStartSimulation} />
+          <FAQ />
         </>
       )}
       
