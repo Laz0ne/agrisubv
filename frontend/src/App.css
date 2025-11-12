@@ -1,4 +1,4 @@
-/* App Styles - AgriSubv V2 - Thème Agricole Moderne */
+/* App Styles - AgriSubv V2 - Thème Agricole Moderne avec Background Enrichi */
 
 .app {
   min-height: 100vh;
@@ -9,7 +9,11 @@
   overflow-x: hidden;
 }
 
-/* Background pattern global - Subtil */
+/* ========================================
+   BACKGROUND LAYERS - Système multi-couches
+   ======================================== */
+
+/* Couche 1 : Gradient de base animé */
 .app::before {
   content: '';
   position: fixed;
@@ -17,14 +21,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: var(--pattern-dots);
-  background-size: 20px 20px;
-  opacity: 0.3;
-  z-index: -1;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(132, 204, 22, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+  animation: gradientFloat 15s ease-in-out infinite;
+  z-index: -3;
   pointer-events: none;
 }
 
-/* Effet de grain/texture agricole */
+@keyframes gradientFloat {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+/* Couche 2 : Pattern de points subtil */
 .app::after {
   content: '';
   position: fixed;
@@ -32,19 +49,142 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='3.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-  opacity: 0.4;
-  z-index: -1;
+  background-image: 
+    radial-gradient(circle, rgba(214, 211, 209, 0.4) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+  z-index: -2;
   pointer-events: none;
 }
 
-/* Loading */
+/* Couche 3 : Formes organiques flottantes */
+.app .background-shapes {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Formes individuelles */
+.background-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+  filter: blur(60px);
+  animation: float 20s ease-in-out infinite;
+}
+
+.shape-1 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 25s;
+}
+
+.shape-2 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #84cc16 0%, #a3e635 100%);
+  top: 60%;
+  right: 15%;
+  animation-delay: 3s;
+  animation-duration: 20s;
+}
+
+.shape-3 {
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  bottom: 15%;
+  left: 20%;
+  animation-delay: 5s;
+  animation-duration: 22s;
+}
+
+.shape-4 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  top: 40%;
+  right: 40%;
+  animation-delay: 7s;
+  animation-duration: 18s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 40px) scale(0.9);
+  }
+  75% {
+    transform: translate(40px, 20px) scale(1.05);
+  }
+}
+
+/* ========================================
+   SECTIONS - Backgrounds alternés
+   ======================================== */
+
+/* Hero Section - Gradient spécial */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, 
+    rgba(254, 252, 232, 1) 0%, 
+    rgba(254, 249, 195, 0.8) 50%,
+    rgba(254, 243, 199, 0.6) 100%
+  );
+}
+
+/* Sections alternées */
+section:nth-child(even) {
+  background: white;
+  position: relative;
+}
+
+section:nth-child(odd) {
+  background: rgba(254, 252, 232, 0.5);
+  position: relative;
+}
+
+/* Effet de séparation entre sections */
+section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(214, 211, 209, 0.5) 50%,
+    transparent 100%
+  );
+}
+
+/* ========================================
+   LOADING
+   ======================================== */
+
 .loading-container {
   max-width: 600px;
   margin: var(--spacing-3xl) auto;
   text-align: center;
   padding: var(--spacing-3xl);
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
   border: 2px solid var(--beige-200);
@@ -70,30 +210,28 @@
   font-weight: 500;
 }
 
-/* Restart */
+/* ========================================
+   RESTART
+   ======================================== */
+
 .restart-container {
   text-align: center;
   margin: var(--spacing-3xl) auto;
   padding: 0 var(--spacing-lg);
 }
 
-/* Sections avec fond alternés */
-section:nth-child(even) {
-  background: white;
-  position: relative;
-}
+/* ========================================
+   SMOOTH SCROLL
+   ======================================== */
 
-section:nth-child(odd) {
-  background: var(--bg-cream);
-  position: relative;
-}
-
-/* Smooth scroll */
 html {
   scroll-behavior: smooth;
 }
 
-/* Boutons avec effet agricole */
+/* ========================================
+   BOUTONS - Effet agricole
+   ======================================== */
+
 .btn-primary {
   position: relative;
   overflow: hidden;
@@ -114,21 +252,17 @@ html {
   left: 100%;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .loading-container {
-    margin: var(--spacing-xl) var(--spacing-lg);
-    padding: var(--spacing-xl);
-  }
-}
+/* ========================================
+   CARDS - Amélioration globale
+   ======================================== */
 
-/* Amélioration des cards globalement */
 .card,
 .wizard-card,
 .step-card,
 .aide-card,
 .stat-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--beige-200);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-base);
@@ -142,4 +276,28 @@ html {
   box-shadow: var(--shadow-xl);
   transform: translateY(-4px);
   border-color: var(--primary-green);
+  background: white;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .loading-container {
+    margin: var(--spacing-xl) var(--spacing-lg);
+    padding: var(--spacing-xl);
+  }
+  
+  .background-shape {
+    filter: blur(40px);
+  }
+  
+  .shape-1,
+  .shape-2,
+  .shape-3,
+  .shape-4 {
+    width: 200px;
+    height: 200px;
+  }
 }
