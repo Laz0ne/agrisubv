@@ -10,6 +10,13 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 
+# ============ CONFIGURATION LOGGER (DÉPLACÉ EN PREMIER) ============
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Imports pour matching V2
 from matching_engine import MatchingEngine
 from models_v2 import ProfilAgriculteur as ProfilAgriculteurV2, ResultatMatching, AideAgricoleV2
@@ -219,57 +226,36 @@ async def get_aides(
 ):
     """
     Récupère les aides avec filtres avancés
-    
-    Paramètres:
-    - region: Filtrer par région
-    - departement: Filtrer par département
-    - production: Filtrer par type de production
-    - projet: Filtrer par type de projet
-    - statut: Filtrer par statut juridique
-    - label: Filtrer par label
-    - montant_min: Montant minimum de l'aide
-    - source: Filtrer par source (manual, aides_territoires, datagouv_pac)
-    - q: Recherche textuelle dans titre et description
-    - include_expired: Inclure les aides expirées
-    - skip: Nombre d'aides à sauter (pagination)
-    - limit: Nombre maximum d'aides à retourner
     """
     query = {}
     
-    # Filtrer les aides expirées sauf si demandé explicitement
     if not include_expired:
         query["expiree"] = False
     
-    # Filtres géographiques
     if region:
         query["regions"] = {"$in": [region, "National"]}
     if departement:
         query["departements"] = departement
     
-    # Filtres de production et projets
     if production:
         query["productions"] = production
     if projet:
         query["criteres_mous_tags"] = {"$regex": projet, "$options": "i"}
     
-    # Filtres statut et labels
     if statut:
         query["statuts"] = statut
     if label:
         query["labels"] = label
     
-    # Filtre montant minimum
     if montant_min is not None:
         query["$or"] = [
             {"montant_max_eur": {"$gte": montant_min}},
             {"montant_min_eur": {"$gte": montant_min}}
         ]
     
-    # Filtre source
     if source:
         query["source"] = source
     
-    # Recherche textuelle
     if q:
         query["$or"] = [
             {"titre": {"$regex": q, "$options": "i"}},
@@ -277,10 +263,8 @@ async def get_aides(
             {"programme": {"$regex": q, "$options": "i"}}
         ]
     
-    # Comptage total pour pagination
     total = await db.aides.count_documents(query)
     
-    # Récupération avec pagination
     aides_cursor = db.aides.find(query).skip(skip).limit(limit)
     aides = await aides_cursor.to_list(length=limit)
     
@@ -323,31 +307,6 @@ async def check_eligibilite(profil: ProfilAgriculteur):
 async def calculate_matching_v2(profil: ProfilAgriculteurV2):
     """
     Matching intelligent V2 entre un profil agriculteur et toutes les aides V2
-    
-    Utilise le matching engine pour calculer un score de correspondance (0-100%)
-    pour chaque aide en fonction de critères pondérés :
-    - Localisation : 25%
-    - Production : 20%
-    - Projet : 15%
-    - Statut juridique : 10%
-    - Âge : 10%
-    - Surface/Cheptel : 10%
-    - Labels : 10%
-    
-    Args:
-        profil: Profil complet de l'agriculteur (ProfilAgriculteurV2)
-    
-    Returns:
-        {
-            "profil_id": str,
-            "total_aides": int,
-            "aides_eligibles": int,
-            "aides_quasi_eligibles": int,
-            "aides_non_eligibles": int,
-            "montant_total_estime_min": float,
-            "montant_total_estime_max": float,
-            "resultats": [ResultatMatching]
-        }
     """
     try:
         logger.info(f"🎯 Matching V2 pour profil: {profil.region}, {profil.statut_juridique.value}")
@@ -378,10 +337,7 @@ async def calculate_matching_v2(profil: ProfilAgriculteurV2):
         resultats = []
         for aide_data in aides:
             try:
-                # Convertir en objet AideAgricoleV2
                 aide = AideAgricoleV2(**aide_data)
-                
-                # Calculer le matching
                 resultat = engine.calculate_match(aide, profil)
                 resultats.append(resultat)
                 
@@ -389,7 +345,7 @@ async def calculate_matching_v2(profil: ProfilAgriculteurV2):
                 logger.error(f"   ❌ Erreur matching aide {aide_data.get('aid_id')}: {e}")
                 continue
         
-        # Trier par score décroissant (aides les plus pertinentes en premier)
+        # Trier par score décroissant
         resultats.sort(key=lambda x: (-x.eligible, -x.score))
         
         # Statistiques globales
@@ -397,7 +353,7 @@ async def calculate_matching_v2(profil: ProfilAgriculteurV2):
         aides_quasi_eligibles = [r for r in resultats if not r.eligible and r.score >= 40]
         aides_non_eligibles = [r for r in resultats if r.score < 40]
         
-        # Calcul du montant total estimé (uniquement aides éligibles)
+        # Calcul du montant total estimé
         montant_total_min = sum(
             r.montant_estime_min or 0 
             for r in aides_eligibles 
@@ -441,20 +397,10 @@ async def calculate_matching_v2(profil: ProfilAgriculteurV2):
 async def test_matching_endpoint():
     """
     Endpoint de test pour vérifier que le matching engine fonctionne
-    
-    Returns:
-        {
-            "status": "ok" | "error",
-            "matching_engine": "loaded" | "error",
-            "aides_v2_count": int,
-            "message": str
-        }
     """
     try:
-        # Vérifier que le matching engine peut être importé
         engine = MatchingEngine()
         
-        # Compter les aides V2
         count_v2 = await db.aides_v2.count_documents({})
         count_active = await db.aides_v2.count_documents({"statut": "active"})
         
@@ -485,44 +431,21 @@ async def test_matching_endpoint():
 @api_router.post("/admin/run-migration")
 async def run_migration_via_http():
     """
-    Endpoint admin pour exécuter la migration V2 avec suppression des aides factices
-    
-    Accessible via :
-    - POST https://agrisubv-backend.onrender.com/api/admin/run-migration
-    - GET https://agrisubv-backend.onrender.com/api/admin/run-migration (si modifié en @api_router.get)
-    
-    Returns:
-        {
-            "status": "success" | "error",
-            "message": str,
-            "migration_results": {
-                "total_old": int,
-                "total_fake": int,
-                "fake_deleted": int,
-                "total_real": int,
-                "total_migrated": int,
-                "errors": int,
-                "stats": {...}
-            }
-        }
+    Endpoint admin pour exécuter la migration V2
     """
     try:
         logger.info("🚀 Démarrage de la migration V2 via HTTP...")
         
-        # Importer la classe de migration
         from migrate_to_v2 import MigrationV2
         
-        # Créer l'instance de migration avec la connexion DB existante
         migration = MigrationV2(db)
         
-        # Exécuter la migration avec suppression des aides factices
         logger.info("⚠️  Mode: Suppression des aides factices ACTIVÉ")
         result = await migration.migrate_all(clean_fake_aids=True)
         
         if result['success']:
             logger.info("✅ Migration terminée avec succès via HTTP")
             
-            # Extract and sanitize all numeric values to prevent any object leakage
             total_old = int(result.get('total_old', 0))
             total_fake = int(result.get('total_fake', 0))
             fake_deleted = int(result.get('fake_deleted', 0))
@@ -530,7 +453,6 @@ async def run_migration_via_http():
             total_migrated = int(result.get('total_migrated', 0))
             errors_count = int(result.get('errors', 0))
             
-            # Extract and sanitize stats - rebuild dicts to ensure no error objects leak
             safe_stats = result.get('stats', {})
             by_source = {}
             for k, v in safe_stats.get('by_source', {}).items():
@@ -569,10 +491,8 @@ async def run_migration_via_http():
             }
         else:
             logger.error("❌ La migration a échoué")
-            # Log detailed errors but don't expose them to clients
             if result.get('errors_details'):
                 logger.error(f"Détails des erreurs: {result.get('errors_details')}")
-            # Return only error count, no details
             return {
                 "status": "error",
                 "message": "La migration a échoué. Consultez les logs du serveur pour plus de détails.",
@@ -583,7 +503,7 @@ async def run_migration_via_http():
         logger.error(f"❌ Erreur import MigrationV2: {e}")
         return {
             "status": "error",
-            "message": "Erreur lors de l'import du module de migration. Consultez les logs du serveur.",
+            "message": "Erreur lors de l'import du module de migration.",
             "error_type": "import_error"
         }
     except Exception as e:
@@ -592,7 +512,7 @@ async def run_migration_via_http():
         logger.error(traceback.format_exc())
         return {
             "status": "error",
-            "message": "Erreur lors de l'exécution de la migration. Consultez les logs du serveur.",
+            "message": "Erreur lors de l'exécution de la migration.",
             "error_type": "execution_error"
         }
 
@@ -600,35 +520,22 @@ async def run_migration_via_http():
 @api_router.get("/admin/migration-status")
 async def get_migration_status():
     """
-    Vérifie l'état des collections pour savoir si la migration a été effectuée
-    
-    Returns:
-        {
-            "aides_count": int,
-            "aides_v2_count": int,
-            "migration_done": bool,
-            "message": str
-        }
+    Vérifie l'état des collections
     """
     try:
-        # Compter les documents dans chaque collection
         aides_count = await db.aides.count_documents({})
         aides_v2_count = await db.aides_v2.count_documents({})
         
-        # Compter les aides actives
         aides_active = await db.aides.count_documents({"expiree": False})
         aides_v2_active = await db.aides_v2.count_documents({"statut": "active"})
         
-        # Déterminer si la migration a été faite
         migration_done = aides_v2_count > 0
         
-        # Compter par source dans aides
         sources_v1 = {}
         async for aide in db.aides.find({}, {"source": 1}):
             source = aide.get("source", "manual")
             sources_v1[source] = sources_v1.get(source, 0) + 1
         
-        # Compter par source dans aides_v2
         sources_v2 = {}
         async for aide in db.aides_v2.find({}, {"source": 1}):
             source = aide.get("source", "manual")
@@ -659,7 +566,7 @@ async def get_migration_status():
         logger.error(f"❌ Erreur lors de la vérification du statut: {e}")
         return {
             "status": "error",
-            "message": "Erreur lors de la vérification du statut. Consultez les logs du serveur."
+            "message": "Erreur lors de la vérification du statut."
         }
 
 @api_router.post("/aides")
@@ -674,328 +581,9 @@ async def create_or_update_aide(aide: AideAgricole):
         await db.aides.insert_one(aide_dict)
         return {"message": "Aide créée", "aid_id": aide.aid_id}
 
-@api_router.post("/seed")
-async def seed_database():
-    """Initialize database with sample agricultural aids"""
-    
-    # Check if already seeded
-    existing_count = await db.aides.count_documents({})
-    if existing_count > 0:
-        return {
-            "message": "Database already contains aids",
-            "existing_aids": existing_count,
-            "action": "skipped"
-        }
-    
-    # Sample aids data
-    sample_aids = [
-        {
-            "aid_id": "aide-001",
-            "titre": "Aide à la Conversion Bio",
-            "organisme": "Agence Bio",
-            "programme": "Conversion Agriculture Biologique 2024",
-            "source_url": "https://www.agencebio.org/aides",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Céréales", "Maraîchage", "Viticulture", "Élevage"],
-            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
-            "labels": ["Agriculture Biologique"],
-            "montant_min_eur": 3500,
-            "montant_max_eur": 12000,
-            "date_ouverture": "2024-01-15",
-            "date_limite": "2024-12-31",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$productions", ["Céréales", "Maraîchage", "Viticulture", "Élevage"]]},
-                    {">=": ["$superficie_ha", 5]}
-                ]
-            },
-            "criteres_mous_tags": ["bio", "conversion", "agriculture durable"],
-            "conditions_clefs": "Engagement conversion bio sur 5 ans minimum",
-            "lien_officiel": "https://www.agencebio.org/conversion",
-            "confiance": 0.95,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-002",
-            "titre": "Dotation Jeunes Agriculteurs (DJA)",
-            "organisme": "Ministère Agriculture",
-            "programme": "Installation Jeunes Agriculteurs 2024",
-            "source_url": "https://agriculture.gouv.fr/dja",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Tous types"],
-            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
-            "labels": [],
-            "montant_min_eur": 8000,
-            "montant_max_eur": 36000,
-            "date_ouverture": "2024-01-01",
-            "date_limite": "2024-12-31",
-            "criteres_durs_expr": {
-                "and": [
-                    {"<=": ["$age", 40]},
-                    {"==": ["$jeune_agriculteur", True]}
-                ]
-            },
-            "criteres_mous_tags": ["installation", "jeune", "reprise exploitation"],
-            "conditions_clefs": "Moins de 40 ans, diplôme agricole requis",
-            "lien_officiel": "https://agriculture.gouv.fr/jeunes-agriculteurs",
-            "confiance": 1.0,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-003",
-            "titre": "Aide à l'Irrigation Économe en Eau",
-            "organisme": "Agence de l'Eau",
-            "programme": "Gestion Durable de l'Eau Agricole",
-            "source_url": "https://www.lesagencesdeleau.fr",
-            "regions": ["Nouvelle-Aquitaine", "Occitanie", "PACA"],
-            "departements": [],
-            "productions": ["Maraîchage", "Arboriculture"],
-            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
-            "labels": [],
-            "taux_min_pct": 30,
-            "taux_max_pct": 50,
-            "plafond_eur": 30000,
-            "date_ouverture": "2024-03-01",
-            "date_limite": "2024-09-30",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$region", ["Nouvelle-Aquitaine", "Occitanie", "PACA"]]},
-                    {"in": ["$productions", ["Maraîchage", "Arboriculture"]]}
-                ]
-            },
-            "criteres_mous_tags": ["irrigation", "économie eau", "goutte-à-goutte"],
-            "conditions_clefs": "Installation système irrigation goutte-à-goutte",
-            "lien_officiel": "https://www.lesagencesdeleau.fr/irrigation",
-            "confiance": 0.88,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-004",
-            "titre": "Certification HVE (Haute Valeur Environnementale)",
-            "organisme": "Ministère Agriculture",
-            "programme": "Transition Agroécologique",
-            "source_url": "https://agriculture.gouv.fr/hve",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Viticulture", "Grandes cultures", "Arboriculture"],
-            "statuts": ["EARL", "SCEA", "Exploitation individuelle", "GAEC"],
-            "labels": ["HVE"],
-            "montant_min_eur": 2500,
-            "montant_max_eur": 8000,
-            "date_ouverture": "2024-01-01",
-            "date_limite": "2024-11-30",
-            "criteres_durs_expr": {
-                "in": ["$productions", ["Viticulture", "Grandes cultures", "Arboriculture"]]
-            },
-            "criteres_mous_tags": ["environnement", "biodiversité", "certification"],
-            "conditions_clefs": "Audit environnemental et plan d'amélioration requis",
-            "lien_officiel": "https://agriculture.gouv.fr/certification-hve",
-            "confiance": 0.92,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-005",
-            "titre": "Aide Robotisation et Numérique Agricole",
-            "organisme": "FranceAgriMer",
-            "programme": "Agriculture 4.0",
-            "source_url": "https://www.franceagrimer.fr",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Élevage laitier", "Grandes cultures"],
-            "statuts": ["EARL", "GAEC", "SCEA"],
-            "labels": [],
-            "taux_min_pct": 20,
-            "taux_max_pct": 40,
-            "plafond_eur": 50000,
-            "date_ouverture": "2024-02-01",
-            "date_limite": "2024-10-31",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$productions", ["Élevage laitier", "Grandes cultures"]]},
-                    {">=": ["$superficie_ha", 30]}
-                ]
-            },
-            "criteres_mous_tags": ["robot", "numérique", "automatisation", "précision"],
-            "conditions_clefs": "Investissement dans robots de traite ou outils de précision",
-            "lien_officiel": "https://www.franceagrimer.fr/robotique",
-            "confiance": 0.85,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-006",
-            "titre": "Aide au Bien-être Animal",
-            "organisme": "Région Bretagne",
-            "programme": "Élevage Responsable 2024",
-            "source_url": "https://www.bretagne.bzh/agriculture",
-            "regions": ["Bretagne"],
-            "departements": ["22", "29", "35", "56"],
-            "productions": ["Élevage porcin", "Élevage bovin", "Élevage avicole"],
-            "statuts": ["EARL", "GAEC", "SCEA"],
-            "labels": [],
-            "taux_min_pct": 25,
-            "taux_max_pct": 40,
-            "plafond_eur": 20000,
-            "date_ouverture": "2024-01-15",
-            "date_limite": "2024-06-30",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$region", ["Bretagne"]]},
-                    {"in": ["$productions", ["Élevage porcin", "Élevage bovin", "Élevage avicole"]]}
-                ]
-            },
-            "criteres_mous_tags": ["bien-être animal", "bâtiment", "aménagement"],
-            "conditions_clefs": "Aménagement bâtiments d'élevage pour bien-être animal",
-            "lien_officiel": "https://www.bretagne.bzh/bien-etre-animal",
-            "confiance": 0.90,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-007",
-            "titre": "Aide à l'Agroforesterie",
-            "organisme": "Région Nouvelle-Aquitaine",
-            "programme": "Plantation Agroforesterie 2024",
-            "source_url": "https://les-aides.nouvelle-aquitaine.fr",
-            "regions": ["Nouvelle-Aquitaine"],
-            "departements": [],
-            "productions": ["Grandes cultures", "Élevage", "Viticulture"],
-            "statuts": ["Exploitation individuelle", "EARL", "GAEC", "SCEA"],
-            "labels": [],
-            "montant_min_eur": 5000,
-            "montant_max_eur": 15000,
-            "date_ouverture": "2024-02-01",
-            "date_limite": "2024-05-31",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$region", ["Nouvelle-Aquitaine"]]},
-                    {">=": ["$superficie_ha", 10]}
-                ]
-            },
-            "criteres_mous_tags": ["agroforesterie", "arbre", "haie", "biodiversité"],
-            "conditions_clefs": "Plantation minimum 100 arbres/ha",
-            "lien_officiel": "https://les-aides.nouvelle-aquitaine.fr/agroforesterie",
-            "confiance": 0.87,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-008",
-            "titre": "Aide Méthanisation Collective",
-            "organisme": "ADEME",
-            "programme": "Énergie Renouvelable Agricole",
-            "source_url": "https://www.ademe.fr",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Élevage"],
-            "statuts": ["GAEC", "CUMA", "Coopérative"],
-            "labels": [],
-            "taux_min_pct": 30,
-            "taux_max_pct": 55,
-            "plafond_eur": 200000,
-            "date_ouverture": "2024-01-01",
-            "date_limite": "2024-12-31",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$productions", ["Élevage"]]},
-                    {"in": ["$statut", ["GAEC", "CUMA", "Coopérative"]]}
-                ]
-            },
-            "criteres_mous_tags": ["méthanisation", "énergie", "biogaz", "collectif"],
-            "conditions_clefs": "Projet collectif minimum 3 exploitations",
-            "lien_officiel": "https://www.ademe.fr/methanisation",
-            "confiance": 0.83,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-009",
-            "titre": "Aide Développement Circuits Courts",
-            "organisme": "Chambre d'Agriculture",
-            "programme": "Vente Directe 2024",
-            "source_url": "https://chambres-agriculture.fr",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Maraîchage", "Élevage", "Viticulture", "Arboriculture"],
-            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
-            "labels": [],
-            "montant_min_eur": 3000,
-            "montant_max_eur": 10000,
-            "date_ouverture": "2024-01-15",
-            "date_limite": "2024-08-31",
-            "criteres_durs_expr": {
-                "in": ["$productions", ["Maraîchage", "Élevage", "Viticulture", "Arboriculture"]]
-            },
-            "criteres_mous_tags": ["circuit court", "vente directe", "magasin", "marché"],
-            "conditions_clefs": "Création point de vente ou aménagement pour circuits courts",
-            "lien_officiel": "https://chambres-agriculture.fr/circuits-courts",
-            "confiance": 0.91,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-010",
-            "titre": "Aide Modernisation des Serres",
-            "organisme": "FranceAgriMer",
-            "programme": "Horticulture Durable",
-            "source_url": "https://www.franceagrimer.fr",
-            "regions": ["National"],
-            "departements": [],
-            "productions": ["Maraîchage", "Horticulture"],
-            "statuts": ["EARL", "SCEA", "Exploitation individuelle"],
-            "labels": [],
-            "taux_min_pct": 25,
-            "taux_max_pct": 40,
-            "plafond_eur": 40000,
-            "date_ouverture": "2024-03-01",
-            "date_limite": "2024-09-30",
-            "criteres_durs_expr": {
-                "and": [
-                    {"in": ["$productions", ["Maraîchage", "Horticulture"]]},
-                    {">=": ["$superficie_ha", 0.5]}
-                ]
-            },
-            "criteres_mous_tags": ["serre", "économie énergie", "isolation", "chauffage"],
-            "conditions_clefs": "Travaux isolation ou système chauffage économe",
-            "lien_officiel": "https://www.franceagrimer.fr/serres",
-            "confiance": 0.86,
-            "expiree": False
-        },
-        {
-            "aid_id": "aide-011",
-            "titre": "Aide à la Diversification Agricole",
-            "organisme": "Région Auvergne-Rhône-Alpes",
-            "programme": "Diversification Activités 2024",
-            "source_url": "https://www.auvergnerhonealpes.fr",
-            "regions": ["Auvergne-Rhône-Alpes"],
-            "departements": [],
-            "productions": ["Tous types"],
-            "statuts": ["Exploitation individuelle", "EARL", "GAEC"],
-            "labels": [],
-            "taux_min_pct": 30,
-            "taux_max_pct": 50,
-            "plafond_eur": 25000,
-            "date_ouverture": "2024-02-01",
-            "date_limite": "2024-11-30",
-            "criteres_durs_expr": {
-                "in": ["$region", ["Auvergne-Rhône-Alpes"]]
-            },
-            "criteres_mous_tags": ["diversification", "agrotourisme", "transformation", "vente"],
-            "conditions_clefs": "Création activité complémentaire (agrotourisme, transformation...)",
-            "lien_officiel": "https://www.auvergnerhonealpes.fr/diversification",
-            "confiance": 0.84,
-            "expiree": False
-        }
-    ]
-    
-    # Insert aids
-    result = await db.aides.insert_many(sample_aids)
-    
-    return {
-        "message": "Database seeded successfully with agricultural aids",
-        "aids_created": len(result.inserted_ids),
-        "aids": sample_aids
-    }
 @api_router.post("/assistant")
 async def assistant_ia(request: AssistantRequest):
-    return {"reponse": "Assistant IA non disponible dans cette version. Utilisez le formulaire pour trouver vos aides."}
+    return {"reponse": "Assistant IA non disponible dans cette version."}
 
 @api_router.get("/stats")
 async def get_stats():
@@ -1013,18 +601,13 @@ async def get_stats():
         "aides_actives": aides_actives,
         "par_organisme": organismes
     }
-# ============ SYNC AIDES-TERRITOIRES ============
+
+# ============ SYNC ENDPOINTS ============
 
 from sync_aides_territoires import sync_aides_to_db
 
 @api_router.post("/sync/aides-territoires")
 async def sync_aides_territoires(limit: Optional[int] = None):
-    """
-    Synchronise les aides depuis l'API Aides-Territoires
-    
-    Paramètres:
-    - limit: Nombre maximum d'aides à synchroniser (optionnel, pour tests)
-    """
     try:
         result = await sync_aides_to_db(db, limit=limit)
         return result
@@ -1034,24 +617,17 @@ async def sync_aides_territoires(limit: Optional[int] = None):
 
 @api_router.get("/sync/status")
 async def get_sync_status():
-    """Retourne le statut de la base de données avec comptage par source et statut"""
-    
     try:
-        # Comptage total
         total_aides = await db.aides.count_documents({})
         
-        # Comptage par source
         aides_manual = await db.aides.count_documents({"source": "manual"})
         aides_at = await db.aides.count_documents({"source": "aides-territoires"})
         aides_pac = await db.aides.count_documents({"source": "datagouv-pac"})
-        # Aides sans source définie (anciennes)
         aides_no_source = await db.aides.count_documents({"source": {"$exists": False}})
         
-        # Comptage par statut
         aides_actives = await db.aides.count_documents({"expiree": False})
         aides_inactives = await db.aides.count_documents({"expiree": True})
         
-        # Dernière synchronisation
         derniere_aide = await db.aides.find_one(
             {"source": {"$in": ["aides-territoires", "datagouv-pac"]}},
             sort=[("derniere_maj", -1)]
@@ -1073,28 +649,18 @@ async def get_sync_status():
         }
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du statut: {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération du statut: {str(e)}")
-
-# ============ SYNC DATA.GOUV.FR PAC ============
+        raise HTTPException(status_code=500, detail=str(e))
 
 from sync_datagouv_pac import sync_pac_to_db
 
 @api_router.post("/sync/datagouv-pac")
 async def sync_datagouv_pac(limit: Optional[int] = None):
-    """
-    Synchronise les aides PAC depuis Data.gouv.fr
-    
-    Paramètres:
-    - limit: Nombre maximum d'aides à synchroniser (optionnel)
-    """
     try:
         result = await sync_pac_to_db(db, limit=limit)
         return result
     except Exception as e:
         logger.error(f"Erreur lors de la synchronisation PAC : {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# ============ SYNC AIDES-TERRITOIRES V2 ============
 
 from sync_aides_territoires_v2 import sync_aides_territoires_v2
 
@@ -1103,19 +669,14 @@ async def sync_aides_territoires_v2_endpoint(
     max_pages: Optional[int] = None,
     background_tasks = None
 ):
-    """
-    Synchronise les aides depuis Aides-Territoires vers le modèle V2
-    
-    Paramètres:
-    - max_pages: Nombre maximum de pages à synchroniser (optionnel, pour tests)
-    """
     try:
-        # Lancer la synchronisation
         result = await sync_aides_territoires_v2(db, max_pages=max_pages)
         return result
     except Exception as e:
         logger.error(f"Erreur lors de la synchronisation V2 : {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============ APP CONFIGURATION ============
 
 app.include_router(api_router)
 
@@ -1127,44 +688,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 @app.on_event("startup")
 async def create_indexes():
     """Crée les index MongoDB optimisés au démarrage"""
     try:
         logger.info("🔧 Création des index MongoDB...")
         
-        # Index texte pour recherche full-text sur titre et description
         await db.aides.create_index([
             ("titre", "text"),
             ("conditions_clefs", "text")
         ], name="text_search_index")
         logger.info("   ✅ Index texte créé")
         
-        # Index sur les régions
         await db.aides.create_index("regions", name="regions_index")
         logger.info("   ✅ Index régions créé")
         
-        # Index sur source et statut
         await db.aides.create_index("source", name="source_index")
         await db.aides.create_index("expiree", name="expiree_index")
         logger.info("   ✅ Index source et statut créés")
         
-        # Index sur date_fin pour gérer les expirations
         await db.aides.create_index("date_limite", name="date_limite_index")
         logger.info("   ✅ Index date_limite créé")
         
-        # Index sur productions et tags
         await db.aides.create_index("productions", name="productions_index")
         await db.aides.create_index("criteres_mous_tags", name="tags_index")
         logger.info("   ✅ Index productions et tags créés")
         
-        # Index pour la collection V2
         await db.aides_v2.create_index([
             ("titre", "text"),
             ("description", "text")
