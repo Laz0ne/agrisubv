@@ -1,19 +1,19 @@
-/* App Styles - AgriSubv V2 - Thème Agricole Moderne */
+/* App Styles - AgriSubv V2 - Thème Agricole Moderne AMÉLIORÉ */
 
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #fafaf5;
+  background: #fdfbf3;
   position: relative;
   overflow-x: hidden;
 }
 
 /* ========================================
-   BACKGROUND AGRICOLE - Pattern de blé/grain
+   BACKGROUND AGRICOLE - Pattern visible
    ======================================== */
 
-/* Texture papier kraft subtile */
+/* Texture agricole avec motif de champs */
 .app::before {
   content: '';
   position: fixed;
@@ -21,20 +21,30 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #fefdf8;
+  background-color: #fdfbf3;
   background-image: 
-    linear-gradient(30deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
-    linear-gradient(150deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
-    linear-gradient(30deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8),
-    linear-gradient(150deg, #f4f1e8 12%, transparent 12.5%, transparent 87%, #f4f1e8 87.5%, #f4f1e8);
-  background-size: 80px 140px;
-  background-position: 0 0, 0 0, 40px 70px, 40px 70px;
-  opacity: 0.3;
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 35px,
+      rgba(132, 204, 22, 0.04) 35px,
+      rgba(132, 204, 22, 0.04) 70px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 35px,
+      rgba(245, 158, 11, 0.04) 35px,
+      rgba(245, 158, 11, 0.04) 70px
+    ),
+    radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(132, 204, 22, 0.1) 0%, transparent 40%),
+    linear-gradient(180deg, #fdfbf3 0%, #f9f6eb 100%);
   z-index: -3;
   pointer-events: none;
 }
 
-/* Motif de grains/semences */
+/* Motif de grains plus visible */
 .app::after {
   content: '';
   position: fixed;
@@ -43,14 +53,53 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 25% 25%, rgba(132, 204, 22, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(245, 158, 11, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 50%);
+    radial-gradient(circle, rgba(132, 204, 22, 0.08) 2px, transparent 2px);
+  background-size: 50px 50px;
   z-index: -2;
   pointer-events: none;
+  opacity: 0.4;
 }
 
-/* Bande décorative supérieure - style champ de blé */
+/* Icônes agricoles décoratives */
+.app .agricultural-icons {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.04;
+  font-size: 120px;
+}
+
+.app .agricultural-icons::before {
+  content: '🌾';
+  position: absolute;
+  top: 15%;
+  left: 5%;
+  animation: floatIcon 25s ease-in-out infinite;
+}
+
+.app .agricultural-icons::after {
+  content: '🚜';
+  position: absolute;
+  bottom: 20%;
+  right: 8%;
+  animation: floatIcon 30s ease-in-out infinite 5s;
+}
+
+@keyframes floatIcon {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-30px) rotate(5deg);
+  }
+}
+
+/* Bande décorative supérieure */
 .app .decorative-band {
   position: fixed;
   top: 80px;
@@ -64,41 +113,39 @@
     #84cc16 75%, 
     #10b981 100%
   );
-  opacity: 0.6;
+  opacity: 0.7;
   z-index: 999;
   pointer-events: none;
+  box-shadow: 0 2px 8px rgba(132, 204, 22, 0.2);
 }
 
 /* ========================================
-   SECTIONS - Backgrounds alternés style agricole
+   SECTIONS - Backgrounds alternés
    ======================================== */
 
-/* Hero Section - Dégradé chaud */
 .hero-section {
   position: relative;
   background: linear-gradient(180deg, 
-    rgba(254, 252, 232, 1) 0%, 
-    rgba(254, 249, 195, 0.8) 100%
+    rgba(254, 252, 232, 0.8) 0%, 
+    rgba(254, 249, 195, 0.5) 100%
   );
-  border-bottom: 3px solid rgba(132, 204, 22, 0.2);
+  border-bottom: 3px solid rgba(132, 204, 22, 0.15);
 }
 
-/* Sections alternées */
 section {
   position: relative;
 }
 
 section:nth-child(even) {
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
   border-bottom: 1px solid rgba(214, 211, 209, 0.3);
 }
 
 section:nth-child(odd) {
-  background: #fefdf8;
+  background: rgba(253, 251, 243, 0.6);
   border-bottom: 1px solid rgba(214, 211, 209, 0.3);
 }
 
-/* Effet de ligne horizontale décorative */
 section::before {
   content: '';
   position: absolute;
@@ -109,24 +156,23 @@ section::before {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(132, 204, 22, 0.2) 20%,
-    rgba(132, 204, 22, 0.2) 80%,
+    rgba(132, 204, 22, 0.25) 50%,
     transparent 100%
   );
 }
 
 /* ========================================
-   WIZARD CONTAINER - Background spécial
+   WIZARD CONTAINER
    ======================================== */
 
 .wizard-container {
   background: linear-gradient(180deg, 
-    rgba(254, 252, 232, 0.5) 0%, 
-    rgba(255, 255, 255, 0.8) 100%
+    rgba(254, 252, 232, 0.6) 0%, 
+    rgba(255, 255, 255, 0.9) 100%
   );
   border-radius: var(--radius-2xl);
   padding: var(--spacing-2xl);
-  margin-top: 100px; /* Espace pour le header fixe */
+  margin-top: 100px;
 }
 
 /* ========================================
@@ -136,14 +182,14 @@ section::before {
 .loading-container {
   max-width: 600px;
   margin: var(--spacing-3xl) auto;
-  margin-top: 120px; /* Espace pour le header fixe */
+  margin-top: 120px;
   text-align: center;
   padding: var(--spacing-3xl);
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-2xl);
-  box-shadow: 0 10px 40px rgba(132, 204, 22, 0.1);
-  border: 2px solid rgba(132, 204, 22, 0.2);
+  box-shadow: 0 10px 40px rgba(132, 204, 22, 0.15);
+  border: 2px solid rgba(132, 204, 22, 0.25);
 }
 
 .spinner {
@@ -174,7 +220,7 @@ section::before {
   text-align: center;
   margin: var(--spacing-3xl) auto;
   padding: 0 var(--spacing-lg);
-  margin-top: 120px; /* Espace pour le header fixe */
+  margin-top: 120px;
 }
 
 /* ========================================
@@ -183,21 +229,17 @@ section::before {
 
 html {
   scroll-behavior: smooth;
-}
-
-/* Ajuster le scroll offset pour le header fixe */
-html {
   scroll-padding-top: 100px;
 }
 
 /* ========================================
-   BOUTONS - Effet agricole
+   BOUTONS
    ======================================== */
 
 .btn-primary {
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(132, 204, 22, 0.3);
+  box-shadow: 0 4px 14px rgba(132, 204, 22, 0.35);
 }
 
 .btn-primary::before {
@@ -212,7 +254,7 @@ html {
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
+  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.45);
 }
 
 .btn-primary:hover::before {
@@ -220,7 +262,7 @@ html {
 }
 
 /* ========================================
-   CARDS - Style agricole
+   CARDS
    ======================================== */
 
 .card,
@@ -231,8 +273,8 @@ html {
 .faq-item {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(5px);
-  border: 2px solid rgba(132, 204, 22, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 2px solid rgba(132, 204, 22, 0.15);
+  box-shadow: 0 4px 12px rgba(132, 204, 22, 0.08);
   transition: all var(--transition-base);
 }
 
@@ -242,9 +284,9 @@ html {
 .aide-card:hover,
 .stat-card:hover,
 .faq-item:hover {
-  box-shadow: 0 8px 24px rgba(132, 204, 22, 0.15);
+  box-shadow: 0 8px 24px rgba(132, 204, 22, 0.2);
   transform: translateY(-4px);
-  border-color: rgba(132, 204, 22, 0.3);
+  border-color: rgba(132, 204, 22, 0.35);
   background: white;
 }
 
@@ -261,5 +303,9 @@ html {
   
   .app .decorative-band {
     top: 70px;
+  }
+  
+  .app .agricultural-icons {
+    font-size: 80px;
   }
 }
