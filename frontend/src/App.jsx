@@ -17,10 +17,11 @@ function App() {
 
   const handleStartSimulation = () => {
     setShowWizard(true);
+    // Scroll vers le wizard avec offset pour le header fixe
     setTimeout(() => {
       const wizardElement = document.querySelector('.wizard-container');
       if (wizardElement) {
-        const yOffset = -100;
+        const yOffset = -100; // Offset pour le header fixe
         const y = wizardElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }
@@ -46,6 +47,7 @@ function App() {
       const data = await response.json();
       setResults(data);
       
+      // Scroll vers les résultats avec offset pour le header fixe
       setTimeout(() => {
         const resultsElement = document.querySelector('.results-container');
         if (resultsElement) {
@@ -64,7 +66,9 @@ function App() {
 
   return (
     <div className="app">
+      {/* Bande décorative sous le header */}
       <div className="decorative-band"></div>
+
       <Header />
       
       {!showWizard && !results && (
