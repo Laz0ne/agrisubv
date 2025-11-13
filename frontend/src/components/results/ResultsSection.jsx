@@ -25,7 +25,7 @@ export const ResultsSection = ({ results }) => {
     resultats = [] 
   } = results;
 
-  const aidesFiltered = resultats.filter(aide => aide.eligible || aide.quasi_eligible);
+  const aidesFiltered = resultats.filter(aide => aide.eligible || aide.score >= 40);
 
   const toggleExpand = (aideId) => {
     setExpandedAide(expandedAide === aideId ? null : aideId);
@@ -77,7 +77,7 @@ export const ResultsSection = ({ results }) => {
           <div className="stat-content">
             <div className="stat-value">
               {montant_total_estime_min > 0 
-                ? `${montant_total_estime_min.toLocaleString()}€ - ${montant_total_estime_max.toLocaleString()}€`
+                ? `${montant_total_estime_min.toLocaleString('fr-FR')}€ - ${montant_total_estime_max.toLocaleString('fr-FR')}€`
                 : 'Non estimé'
               }
             </div>
@@ -99,117 +99,137 @@ export const ResultsSection = ({ results }) => {
         </div>
 
         <div className="aides-list">
-          {aidesFiltered.map((aide, index) => (
-            <div 
-              key={aide.aide_id} 
-              className={`aide-card-enhanced ${expandedAide === aide.aide_id ? 'expanded' : ''}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              {/* Header de la carte */}
-              <div className="aide-card-header">
-                <div className="aide-header-left">
-                  <div className="aide-rank">#{index + 1}</div>
-                  <div className={`aide-badge ${aide.eligible ? 'green' : 'yellow'}`}>
-                    {aide.eligible ? '✅ Éligible' : '⚠️ Quasi-éligible'}
+          {aidesFiltered.map((aide, index) => {
+            // Récupérer les données de l'aide de manière sécurisée
+            const aideData = aide.aide || aide;
+            const titre = aideData.titre || aide.titre || 'Aide sans titre';
+            const organisme = aideData.organisme || aide.organisme;
+            const score = aide.score || 0;
+            const eligible = aide.eligible || false;
+            const montantMin = aide.montant_estime_min || aideData.montant_min_eur || 0;
+            const montantMax = aide.montant_estime_max || aideData.montant_max_eur || 0;
+            const description = aide.description || aideData.description || '';
+            const resume = aide.resume || '';
+            const recommandations = aide.recommandations || [];
+            const aideId = aide.aide_id || aideData.aid_id || index;
+
+            return (
+              <div 
+                key={aideId} 
+                className={`aide-card-enhanced ${expandedAide === aideId ? 'expanded' : ''}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                {/* Header de la carte */}
+                <div className="aide-card-header">
+                  <div className="aide-header-left">
+                    <div className="aide-rank">#{index + 1}</div>
+                    <div className={`aide-badge ${eligible ? 'green' : 'yellow'}`}>
+                      {eligible ? '✅ Éligible' : '⚠️ Quasi-éligible'}
+                    </div>
+                    <div className="aide-score-badge">
+                      {Math.round(score)}% match
+                    </div>
                   </div>
-                  <div className="aide-score-badge">
-                    {Math.round(aide.score)}% match
+                  <button 
+                    className="aide-expand-btn"
+                    onClick={() => toggleExpand(aideId)}
+                    aria-label={expandedAide === aideId ? "Réduire" : "Développer"}
+                  >
+                    {expandedAide === aideId ? '▼' : '▶'}
+                  </button>
+                </div>
+                
+                {/* Titre et organisme */}
+                <h3 className="aide-title">{titre}</h3>
+                
+                {organisme && (
+                  <div className="aide-organisme">
+                    🏢 {organisme}
+                  </div>
+                )}
+                
+                {/* Barre de score */}
+                <div className="aide-score-section">
+                  <div className="score-bar-container">
+                    <div className="score-bar-bg">
+                      <div 
+                        className={`score-bar-fill ${score >= 80 ? 'excellent' : score >= 60 ? 'good' : 'average'}`}
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                    <div className="score-labels">
+                      <span className="score-label-left">Correspondance</span>
+                      <span className="score-label-right">{Math.round(score)}%</span>
+                    </div>
                   </div>
                 </div>
-                <button 
-                  className="aide-expand-btn"
-                  onClick={() => toggleExpand(aide.aide_id)}
-                  aria-label={expandedAide === aide.aide_id ? "Réduire" : "Développer"}
-                >
-                  {expandedAide === aide.aide_id ? '▼' : '▶'}
-                </button>
+
+                {/* Montant */}
+                {(montantMin > 0 || montantMax > 0) && (
+                  <div className="aide-montant-section">
+                    <div className="montant-icon">💰</div>
+                    <div className="montant-details">
+                      <div className="montant-label">Montant estimé</div>
+                      <div className="montant-value">
+                        {montantMin > 0 && montantMax > 0 
+                          ? `${montantMin.toLocaleString('fr-FR')}€ - ${montantMax.toLocaleString('fr-FR')}€`
+                          : montantMin > 0 
+                            ? `À partir de ${montantMin.toLocaleString('fr-FR')}€`
+                            : `Jusqu'à ${montantMax.toLocaleString('fr-FR')}€`
+                        }
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description (si développé) */}
+                {expandedAide === aideId && (
+                  <div className="aide-details-expanded">
+                    {description && (
+                      <div className="detail-section">
+                        <h4>📝 Description</h4>
+                        <p>{description}</p>
+                      </div>
+                    )}
+                    
+                    {resume && (
+                      <div className="detail-section">
+                        <h4>💡 Résumé</h4>
+                        <p>{resume}</p>
+                      </div>
+                    )}
+
+                    {recommandations && recommandations.length > 0 && (
+                      <div className="detail-section">
+                        <h4>🎯 Recommandations</h4>
+                        <ul className="recommendations-list">
+                          {recommandations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Boutons d'action */}
+                <div className="aide-actions">
+                  <button 
+                    className="btn-details-primary"
+                    onClick={() => toggleExpand(aideId)}
+                  >
+                    {expandedAide === aideId ? 'Réduire' : 'Voir les détails'} →
+                  </button>
+                  <button className="btn-favorite" title="Ajouter aux favoris">
+                    ⭐
+                  </button>
+                  <button className="btn-share" title="Partager">
+                    📤
+                  </button>
+                </div>
               </div>
-              
-              {/* Titre et organisme */}
-              <h3 className="aide-title">{aide.titre}</h3>
-              
-              {aide.organisme && (
-                <div className="aide-organisme">
-                  🏢 {aide.organisme}
-                </div>
-              )}
-              
-              {/* Barre de score */}
-              <div className="aide-score-section">
-                <div className="score-bar-container">
-                  <div className="score-bar-bg">
-                    <div 
-                      className={`score-bar-fill ${aide.score >= 80 ? 'excellent' : aide.score >= 60 ? 'good' : 'average'}`}
-                      style={{ width: `${aide.score}%` }}
-                    />
-                  </div>
-                  <div className="score-labels">
-                    <span className="score-label-left">Correspondance</span>
-                    <span className="score-label-right">{Math.round(aide.score)}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Montant */}
-              {(aide.montant_estime_min || aide.montant_estime_max) && (
-                <div className="aide-montant-section">
-                  <div className="montant-icon">💰</div>
-                  <div className="montant-details">
-                    <div className="montant-label">Montant estimé</div>
-                    <div className="montant-value">
-                      {aide.montant_estime_min?.toLocaleString()}€ - {aide.montant_estime_max?.toLocaleString()}€
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Description (si développé) */}
-              {expandedAide === aide.aide_id && (
-                <div className="aide-details-expanded">
-                  {aide.description && (
-                    <div className="detail-section">
-                      <h4>📝 Description</h4>
-                      <p>{aide.description}</p>
-                    </div>
-                  )}
-                  
-                  {aide.resume && (
-                    <div className="detail-section">
-                      <h4>💡 Résumé</h4>
-                      <p>{aide.resume}</p>
-                    </div>
-                  )}
-
-                  {aide.recommandations && aide.recommandations.length > 0 && (
-                    <div className="detail-section">
-                      <h4>🎯 Recommandations</h4>
-                      <ul className="recommendations-list">
-                        {aide.recommandations.map((rec, i) => (
-                          <li key={i}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Boutons d'action */}
-              <div className="aide-actions">
-                <button 
-                  className="btn-details-primary"
-                  onClick={() => toggleExpand(aide.aide_id)}
-                >
-                  {expandedAide === aide.aide_id ? 'Réduire' : 'Voir les détails'} →
-                </button>
-                <button className="btn-favorite" title="Ajouter aux favoris">
-                  ⭐
-                </button>
-                <button className="btn-share" title="Partager">
-                  📤
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
