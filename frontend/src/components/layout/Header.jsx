@@ -3,17 +3,21 @@ import './Header.css';
 
 export const Header = () => {
   const scrollToTop = () => {
+    // Recharger la page pour revenir à l'accueil
     window.location.href = '/';
   };
 
   const navigateToSection = (sectionId) => {
+    // Si on est dans le wizard/résultats, d'abord retourner à l'accueil
     const isOnHomepage = !window.location.hash && 
                          !document.querySelector('.wizard-container') &&
                          !document.querySelector('.results-container');
     
     if (!isOnHomepage) {
+      // Retourner à l'accueil avec le hash de la section
       window.location.href = `/#${sectionId}`;
     } else {
+      // Déjà sur la homepage, juste scroller
       const element = document.getElementById(sectionId);
       if (element) {
         const yOffset = -100;
