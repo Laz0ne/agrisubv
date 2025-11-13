@@ -12,10 +12,16 @@
   padding: var(--spacing-2xl);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   border: none;
+  min-height: 600px; /* ✅ Hauteur minimale fixe */
+  display: flex;
+  flex-direction: column;
 }
 
 .wizard-content {
   margin-top: var(--spacing-xl);
+  flex: 1; /* ✅ Prend tout l'espace disponible */
+  display: flex;
+  flex-direction: column;
 }
 
 .wizard-actions {
@@ -50,6 +56,9 @@
 /* Step styles */
 .wizard-step {
   animation: fadeIn 0.3s ease-out;
+  flex: 1; /* ✅ Permet à chaque étape de prendre l'espace disponible */
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fadeIn {
@@ -83,6 +92,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  flex: 1; /* ✅ Le formulaire prend tout l'espace */
 }
 
 .form-group {
@@ -189,6 +199,7 @@
 @media (max-width: 768px) {
   .wizard-card {
     padding: var(--spacing-lg);
+    min-height: auto; /* ✅ Hauteur flexible sur mobile */
   }
 
   .wizard-actions {
