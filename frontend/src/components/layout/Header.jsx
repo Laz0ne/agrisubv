@@ -1,21 +1,18 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import './Header.css';
 
 export const Header = () => {
-  const navigate = useNavigate();
+  const scrollToTop = () => {
+    window.location.href = '/';
+  };
 
-  const scrollToSection = (sectionId) => {
-    if (window.location.pathname !== '/') {
-      navigate('/');
-      setTimeout(() => {
-        const element = document.getElementById(sectionId);
-        if (element) {
-          const yOffset = -100;
-          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-      }, 100);
+  const navigateToSection = (sectionId) => {
+    const isOnHomepage = !window.location.hash && 
+                         !document.querySelector('.wizard-container') &&
+                         !document.querySelector('.results-container');
+    
+    if (!isOnHomepage) {
+      window.location.href = `/#${sectionId}`;
     } else {
       const element = document.getElementById(sectionId);
       if (element) {
@@ -29,35 +26,33 @@ export const Header = () => {
   return (
     <header className="header">
       <div className="header-container">
-        <Link to="/" className="header-logo">
+        <div className="header-logo" onClick={scrollToTop}>
           <span className="logo-icon">🌾</span>
           <span className="logo-text">AgriSubv</span>
-        </Link>
+        </div>
         
         <nav className="header-nav">
-          <Link to="/" className="nav-link">
-            Accueil
-          </Link>
           <button 
             className="nav-link"
-            onClick={() => scrollToSection('comment-ca-marche')}
+            onClick={scrollToTop}
+          >
+            Accueil
+          </button>
+          <button 
+            className="nav-link"
+            onClick={() => navigateToSection('comment-ca-marche')}
           >
             Comment ça marche
           </button>
           <button 
             className="nav-link"
-            onClick={() => scrollToSection('faq')}
+            onClick={() => navigateToSection('faq')}
           >
             FAQ
           </button>
-          <Link to="/contact" className="nav-link">
-            Contact
-          </Link>
         </nav>
         
-        <Link to="/compte" className="btn-account">
-          Mon compte
-        </Link>
+        <button className="btn-account">Mon compte</button>
       </div>
     </header>
   );
