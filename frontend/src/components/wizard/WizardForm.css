@@ -1,4 +1,4 @@
-/* WizardForm Styles - AgriSubv V2 */
+/* WizardForm Styles - AgriSubv V2 - FIX TAILLE CONSTANTE */
 
 .wizard-container {
   max-width: 900px;
@@ -12,16 +12,41 @@
   padding: var(--spacing-2xl);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   border: none;
-  min-height: 600px; /* ✅ Hauteur minimale fixe */
+  /* ✅ HAUTEUR FIXE pour éviter le rétrécissement */
+  height: 700px;
   display: flex;
   flex-direction: column;
 }
 
 .wizard-content {
   margin-top: var(--spacing-xl);
-  flex: 1; /* ✅ Prend tout l'espace disponible */
+  /* ✅ Prend tout l'espace disponible */
+  flex: 1;
   display: flex;
   flex-direction: column;
+  /* ✅ Overflow pour le contenu trop grand */
+  overflow-y: auto;
+  /* ✅ Padding pour ne pas couper le contenu */
+  padding-right: var(--spacing-xs);
+}
+
+/* ✅ Scrollbar personnalisée (optionnel mais joli) */
+.wizard-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wizard-content::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 3px;
+}
+
+.wizard-content::-webkit-scrollbar-thumb {
+  background: var(--primary-green);
+  border-radius: 3px;
+}
+
+.wizard-content::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-green-dark);
 }
 
 .wizard-actions {
@@ -31,6 +56,8 @@
   margin-top: var(--spacing-2xl);
   padding-top: var(--spacing-xl);
   border-top: 1px solid var(--gray-200);
+  /* ✅ Empêche les boutons de bouger */
+  flex-shrink: 0;
 }
 
 .wizard-actions button {
@@ -56,7 +83,7 @@
 /* Step styles */
 .wizard-step {
   animation: fadeIn 0.3s ease-out;
-  flex: 1; /* ✅ Permet à chaque étape de prendre l'espace disponible */
+  /* ✅ Chaque étape prend l'espace nécessaire */
   display: flex;
   flex-direction: column;
 }
@@ -92,7 +119,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-  flex: 1; /* ✅ Le formulaire prend tout l'espace */
 }
 
 .form-group {
@@ -147,6 +173,7 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: var(--primary-green);
 }
 
 .form-hint {
@@ -196,10 +223,16 @@
   margin: 0;
 }
 
+/* ✅ RESPONSIVE : Hauteur flexible sur mobile */
 @media (max-width: 768px) {
   .wizard-card {
     padding: var(--spacing-lg);
-    min-height: auto; /* ✅ Hauteur flexible sur mobile */
+    height: auto; /* ✅ Hauteur automatique sur mobile */
+    min-height: 500px; /* ✅ Mais quand même une hauteur minimale */
+  }
+
+  .wizard-content {
+    overflow-y: visible; /* ✅ Pas de scroll sur mobile */
   }
 
   .wizard-actions {
@@ -212,5 +245,12 @@
 
   .checkbox-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ✅ POUR LES TRÈS GRANDS ÉCRANS */
+@media (min-width: 1400px) {
+  .wizard-card {
+    height: 750px; /* ✅ Un peu plus grand sur grands écrans */
   }
 }
