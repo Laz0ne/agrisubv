@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from './components/layout/Header';
 import { HeroSection } from './components/layout/HeroSection';
 import { HowItWorks } from './components/home/HowItWorks';
@@ -7,13 +6,11 @@ import { FAQ } from './components/home/FAQ';
 import { Footer } from './components/layout/Footer';
 import { WizardForm } from './components/wizard/WizardForm';
 import { ResultsSection } from './components/results/ResultsSection';
-import { Contact } from './pages/Contact';
-import { Account } from './pages/Account';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';
 
-function HomePage() {
+function App() {
   const [showWizard, setShowWizard] = useState(false);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +63,10 @@ function HomePage() {
   };
 
   return (
-    <>
+    <div className="app">
+      <div className="decorative-band"></div>
+      <Header />
+      
       {!showWizard && !results && (
         <>
           <HeroSection onStart={handleStartSimulation} />
@@ -103,27 +103,9 @@ function HomePage() {
           </div>
         </>
       )}
-    </>
-  );
-}
-
-function App() {
-  return (
-    <Router>
-      <div className="app">
-        <div className="decorative-band"></div>
-        <Header />
-        
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/compte" element={<Account />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        
-        <Footer />
-      </div>
-    </Router>
+      
+      <Footer />
+    </div>
   );
 }
 
