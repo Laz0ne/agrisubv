@@ -19,8 +19,9 @@ async def explore_aides_territoires_handler():
         API_BASE_URL = "https://aides-territoires.beta.gouv.fr/api"
         API_TOKEN = "92de4853a490b73a75567d7fb66955d62babdd0c9328f67c12a9f2f4266b8ecb"
         
+        # ⚠️ CORRECTION : Utiliser X-AUTH-TOKEN au lieu de Authorization Bearer
         headers = {
-            "Authorization": f"Bearer {API_TOKEN}",
+            "X-AUTH-TOKEN": API_TOKEN,
             "Content-Type": "application/json"
         }
         
@@ -42,9 +43,10 @@ async def explore_aides_territoires_handler():
                 results["api_connection"] = {
                     "status_code": response.status_code,
                     "success": response.status_code == 200,
-                    "endpoints": response.json() if response.status_code == 200 else {}
+                    "endpoints": response.json() if response.status_code == 200 else {},
+                    "headers_used": "X-AUTH-TOKEN"
                 }
-                logger.info(f"✅ Connexion réussie: {response.status_code}")
+                logger.info(f"✅ Connexion: {response.status_code}")
             except Exception as e:
                 logger.error(f"❌ Erreur connexion: {e}")
                 results["api_connection"] = {"error": str(e)}
@@ -53,6 +55,7 @@ async def explore_aides_territoires_handler():
             logger.info("👥 Exploration des audiences...")
             try:
                 response = await client.get(API_BASE_URL + "/aids/audiences/", headers=headers)
+                logger.info(f"Audiences response: {response.status_code}")
                 if response.status_code == 200:
                     audiences = response.json()
                     results["audiences"] = audiences
@@ -64,6 +67,8 @@ async def explore_aides_territoires_handler():
                     )]
                     results["agricultural_audiences"] = agri_audiences
                     logger.info(f"✅ {len(audiences)} audiences trouvées, {len(agri_audiences)} agricoles")
+                else:
+                    results["audiences_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
             except Exception as e:
                 logger.error(f"❌ Erreur audiences: {e}")
                 results["audiences_error"] = str(e)
@@ -72,6 +77,7 @@ async def explore_aides_territoires_handler():
             logger.info("📂 Exploration des catégories...")
             try:
                 response = await client.get(API_BASE_URL + "/categories/", headers=headers)
+                logger.info(f"Categories response: {response.status_code}")
                 if response.status_code == 200:
                     data = response.json()
                     categories = data.get("results", []) if isinstance(data, dict) else data
@@ -94,6 +100,8 @@ async def explore_aides_territoires_handler():
                         for c in agri_categories
                     ]
                     logger.info(f"✅ {len(categories)} catégories trouvées, {len(agri_categories)} agricoles")
+                else:
+                    results["categories_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
             except Exception as e:
                 logger.error(f"❌ Erreur catégories: {e}")
                 results["categories_error"] = str(e)
@@ -106,6 +114,7 @@ async def explore_aides_territoires_handler():
                     "page_size": 10
                 }
                 response = await client.get(API_BASE_URL + "/aids/", headers=headers, params=params)
+                logger.info(f"Aids search response: {response.status_code}")
                 if response.status_code == 200:
                     data = response.json()
                     results["total_aids_found"] = data.get("count", 0)
@@ -119,7 +128,7 @@ async def explore_aides_territoires_handler():
                             "targeted_audiences": aid.get("targeted_audiences", []),
                             "aid_types": aid.get("aid_types", []),
                             "perimeter": aid.get("perimeter"),
-                            "eligibility": aid.get("eligibility"),
+                            "eligibility": aid.get("eligibility", "")[:200] + "..." if aid.get("eligibility") else "",
                             "url": aid.get("url")
                         }
                         for aid in aids[:5]
@@ -129,14 +138,16 @@ async def explore_aides_territoires_handler():
                     if aids:
                         first_aid = aids[0]
                         results["aid_structure_fields"] = sorted(list(first_aid.keys()))
-                        results["sample_full_aid"] = first_aid
+                        # Ne pas inclure l'aide complète pour éviter un JSON trop gros
                     
                     logger.info(f"✅ {len(aids)} aides trouvées")
+                else:
+                    results["aids_search_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
             except Exception as e:
                 logger.error(f"❌ Erreur recherche aides: {e}")
                 results["aids_search_error"] = str(e)
         
-        logger.info("✅ Exploration terminée avec succès")
+        logger.info("✅ Exploration terminée")
         return results
         
     except Exception as e:
