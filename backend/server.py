@@ -28,9 +28,10 @@ from models_v2 import (
     TypeProjet
 )
 
-# Import exploration et export Aides-Territoires
+# Import exploration, export et analyse Aides-Territoires
 from explore_aides_endpoint import explore_aides_territoires_handler
 from export_aides_endpoint import export_aides_handler
+from analyze_criteria_endpoint import analyze_criteria_handler
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -646,6 +647,11 @@ async def explore_aides_territoires():
 async def export_aides_agricoles():
     """Exporte toutes les 507 aides agricoles en JSON pour enrichissement manuel"""
     return await export_aides_handler()
+
+@api_router.get("/admin/analyze-criteria")
+async def analyze_criteria():
+    """Analyse les 507 aides pour extraire tous les critères d'éligibilité"""
+    return await analyze_criteria_handler()
 
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
