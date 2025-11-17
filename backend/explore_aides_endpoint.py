@@ -1,6 +1,5 @@
 """
 Endpoint admin pour explorer l'API Aides-Territoires
-À ajouter dans server.py
 """
 
 import httpx
@@ -12,14 +11,12 @@ logger = logging.getLogger(__name__)
 
 async def explore_aides_territoires_handler():
     """
-    Explore l'API Aides-Territoires pour identifier les aides agricoles
-    Retourne les audiences, catégories et échantillons d'aides
+    Explore l'API Aides-Territoires avec debug détaillé
     """
     try:
         API_BASE_URL = "https://aides-territoires.beta.gouv.fr/api"
         API_TOKEN = "92de4853a490b73a75567d7fb66955d62babdd0c9328f67c12a9f2f4266b8ecb"
         
-        # ⚠️ CORRECTION : Utiliser X-AUTH-TOKEN au lieu de Authorization Bearer
         headers = {
             "X-AUTH-TOKEN": API_TOKEN,
             "Content-Type": "application/json"
@@ -29,131 +26,91 @@ async def explore_aides_territoires_handler():
             "status": "success",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "api_connection": None,
-            "audiences": [],
-            "categories": [],
-            "sample_aids": [],
-            "agricultural_keywords": []
+            "root_endpoint_response": None,
+            "aids_search_response": None
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Test connexion API
-            logger.info("🔍 Test de connexion API Aides-Territoires...")
+            # Test 1 : Root endpoint
+            logger.info("🔍 Test root endpoint...")
             try:
                 response = await client.get(API_BASE_URL + "/", headers=headers)
                 results["api_connection"] = {
                     "status_code": response.status_code,
-                    "success": response.status_code == 200,
-                    "endpoints": response.json() if response.status_code == 200 else {},
-                    "headers_used": "X-AUTH-TOKEN"
+                    "success": response.status_code == 200
                 }
-                logger.info(f"✅ Connexion: {response.status_code}")
-            except Exception as e:
-                logger.error(f"❌ Erreur connexion: {e}")
-                results["api_connection"] = {"error": str(e)}
-            
-            # Explorer les audiences
-            logger.info("👥 Exploration des audiences...")
-            try:
-                response = await client.get(API_BASE_URL + "/aids/audiences/", headers=headers)
-                logger.info(f"Audiences response: {response.status_code}")
+                
                 if response.status_code == 200:
-                    audiences = response.json()
-                    results["audiences"] = audiences
-                    
-                    # Identifier audiences agricoles
-                    agri_audiences = [a for a in audiences if any(
-                        keyword in str(a).lower() 
-                        for keyword in ["agricul", "farmer", "rural", "exploit", "elevage"]
-                    )]
-                    results["agricultural_audiences"] = agri_audiences
-                    logger.info(f"✅ {len(audiences)} audiences trouvées, {len(agri_audiences)} agricoles")
+                    root_data = response.json()
+                    results["root_endpoint_response"] = root_data
+                    logger.info(f"✅ Root endpoint OK, keys: {list(root_data.keys())}")
                 else:
-                    results["audiences_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
+                    results["root_endpoint_error"] = response.text[:500]
             except Exception as e:
-                logger.error(f"❌ Erreur audiences: {e}")
-                results["audiences_error"] = str(e)
+                logger.error(f"❌ Erreur root: {e}")
+                results["root_endpoint_error"] = str(e)
             
-            # Explorer les catégories
-            logger.info("📂 Exploration des catégories...")
-            try:
-                response = await client.get(API_BASE_URL + "/categories/", headers=headers)
-                logger.info(f"Categories response: {response.status_code}")
-                if response.status_code == 200:
-                    data = response.json()
-                    categories = data.get("results", []) if isinstance(data, dict) else data
-                    results["categories"] = [
-                        {
-                            "id": c.get("id"), 
-                            "name": c.get("name"), 
-                            "slug": c.get("slug")
-                        }
-                        for c in categories
-                    ]
-                    
-                    # Catégories agricoles
-                    agri_categories = [c for c in categories if any(
-                        keyword in str(c).lower()
-                        for keyword in ["agricul", "rural", "environment", "bio", "elevage"]
-                    )]
-                    results["agricultural_categories"] = [
-                        {"name": c.get("name"), "slug": c.get("slug")}
-                        for c in agri_categories
-                    ]
-                    logger.info(f"✅ {len(categories)} catégories trouvées, {len(agri_categories)} agricoles")
-                else:
-                    results["categories_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
-            except Exception as e:
-                logger.error(f"❌ Erreur catégories: {e}")
-                results["categories_error"] = str(e)
-            
-            # Rechercher aides agricoles
-            logger.info("🔍 Recherche d'aides agricoles...")
+            # Test 2 : Recherche d'aides agricoles
+            logger.info("🔍 Recherche aides agricoles...")
             try:
                 params = {
                     "text": "agricole",
-                    "page_size": 10
+                    "page_size": 5
                 }
-                response = await client.get(API_BASE_URL + "/aids/", headers=headers, params=params)
-                logger.info(f"Aids search response: {response.status_code}")
+                response = await client.get(
+                    API_BASE_URL + "/aids/",
+                    headers=headers,
+                    params=params
+                )
+                
+                logger.info(f"Aids search status: {response.status_code}")
+                
                 if response.status_code == 200:
                     data = response.json()
-                    results["total_aids_found"] = data.get("count", 0)
+                    results["aids_search_response"] = {
+                        "status_code": 200,
+                        "total_count": data.get("count", 0),
+                        "results_returned": len(data.get("results", [])),
+                        "sample_aids": [
+                            {
+                                "id": aid.get("id"),
+                                "name": aid.get("name"),
+                                "slug": aid.get("slug"),
+                                "url": aid.get("url"),
+                                "targeted_audiences": aid.get("targeted_audiences", []),
+                                "aid_types": aid.get("aid_types", []),
+                                "available_fields": list(aid.keys())
+                            }
+                            for aid in data.get("results", [])[:3]
+                        ]
+                    }
                     
-                    aids = data.get("results", [])
-                    results["sample_aids"] = [
-                        {
-                            "id": aid.get("id"),
-                            "name": aid.get("name"),
-                            "slug": aid.get("slug"),
-                            "targeted_audiences": aid.get("targeted_audiences", []),
-                            "aid_types": aid.get("aid_types", []),
-                            "perimeter": aid.get("perimeter"),
-                            "eligibility": aid.get("eligibility", "")[:200] + "..." if aid.get("eligibility") else "",
-                            "url": aid.get("url")
+                    # Analyser première aide en détail
+                    if data.get("results"):
+                        first_aid = data["results"][0]
+                        results["first_aid_full_structure"] = {
+                            "fields": sorted(list(first_aid.keys())),
+                            "targeted_audiences": first_aid.get("targeted_audiences"),
+                            "aid_types": first_aid.get("aid_types"),
+                            "eligibility_preview": str(first_aid.get("eligibility", ""))[:200]
                         }
-                        for aid in aids[:5]
-                    ]
                     
-                    # Analyser la structure d'une aide complète
-                    if aids:
-                        first_aid = aids[0]
-                        results["aid_structure_fields"] = sorted(list(first_aid.keys()))
-                        # Ne pas inclure l'aide complète pour éviter un JSON trop gros
-                    
-                    logger.info(f"✅ {len(aids)} aides trouvées")
+                    logger.info(f"✅ {data.get('count', 0)} aides trouvées")
                 else:
-                    results["aids_search_error"] = f"HTTP {response.status_code}: {response.text[:200]}"
+                    results["aids_search_error"] = {
+                        "status_code": response.status_code,
+                        "error": response.text[:500]
+                    }
             except Exception as e:
-                logger.error(f"❌ Erreur recherche aides: {e}")
+                logger.error(f"❌ Erreur search: {e}")
                 results["aids_search_error"] = str(e)
         
         logger.info("✅ Exploration terminée")
         return results
         
     except Exception as e:
-        logger.error(f"❌ Erreur exploration: {e}")
+        logger.error(f"❌ Erreur globale: {e}")
         import traceback
-        logger.error(traceback.format_exc())
         return {
             "status": "error",
             "message": str(e),
