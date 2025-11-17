@@ -32,6 +32,7 @@ from models_v2 import (
 from explore_aides_endpoint import explore_aides_territoires_handler
 from export_aides_endpoint import export_aides_handler
 from analyze_criteria_endpoint import analyze_criteria_handler
+from questionnaire_endpoint import get_questionnaire_config
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -653,6 +654,11 @@ async def analyze_criteria():
     """Analyse les 507 aides pour extraire tous les critères d'éligibilité"""
     return await analyze_criteria_handler()
 
+@api_router.get("/questionnaire/config")
+async def get_questionnaire():
+    """Retourne la configuration du questionnaire dynamique"""
+    return await get_questionnaire_config()
+    
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
     aide_dict = aide.dict()
