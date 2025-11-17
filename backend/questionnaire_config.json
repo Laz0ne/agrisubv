@@ -1,0 +1,404 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "created_date": "2025-11-17",
+    "created_by": "Laz0ne",
+    "based_on_analysis": "507 aides agricoles (Aides-Territoires)",
+    "total_questions": 15,
+    "estimated_time_minutes": 5
+  },
+  "sections": [
+    {
+      "id": "identite",
+      "titre": "Votre exploitation",
+      "description": "Informations générales sur votre exploitation agricole",
+      "ordre": 1,
+      "obligatoire": true,
+      "questions": [
+        {
+          "id": "region",
+          "type": "select",
+          "label": "Dans quelle région est située votre exploitation ?",
+          "placeholder": "Sélectionnez votre région",
+          "required": true,
+          "ordre": 1,
+          "field_mapping": "region",
+          "coverage_percent": 100,
+          "options": [
+            {"value": "Auvergne-Rhône-Alpes", "label": "Auvergne-Rhône-Alpes"},
+            {"value": "Bourgogne-Franche-Comté", "label": "Bourgogne-Franche-Comté"},
+            {"value": "Bretagne", "label": "Bretagne"},
+            {"value": "Centre-Val de Loire", "label": "Centre-Val de Loire"},
+            {"value": "Corse", "label": "Corse"},
+            {"value": "Grand Est", "label": "Grand Est"},
+            {"value": "Hauts-de-France", "label": "Hauts-de-France"},
+            {"value": "Île-de-France", "label": "Île-de-France"},
+            {"value": "Normandie", "label": "Normandie"},
+            {"value": "Nouvelle-Aquitaine", "label": "Nouvelle-Aquitaine"},
+            {"value": "Occitanie", "label": "Occitanie"},
+            {"value": "Pays de la Loire", "label": "Pays de la Loire"},
+            {"value": "Provence-Alpes-Côte d'Azur", "label": "Provence-Alpes-Côte d'Azur"}
+          ]
+        },
+        {
+          "id": "departement",
+          "type": "text",
+          "label": "Quel est votre département ?",
+          "placeholder": "Ex: 35, 44, 56...",
+          "required": true,
+          "ordre": 2,
+          "field_mapping": "departement",
+          "coverage_percent": 100,
+          "validation": {
+            "pattern": "^[0-9]{2,3}$",
+            "error_message": "Veuillez entrer un numéro de département valide (2 ou 3 chiffres)"
+          }
+        },
+        {
+          "id": "statut_juridique",
+          "type": "select",
+          "label": "Quel est le statut juridique de votre exploitation ?",
+          "placeholder": "Sélectionnez votre statut",
+          "required": true,
+          "ordre": 3,
+          "field_mapping": "statut_juridique",
+          "coverage_percent": 34.1,
+          "help_text": "34% des aides ont des critères spécifiques au statut juridique",
+          "options": [
+            {"value": "Exploitation individuelle", "label": "Exploitation individuelle"},
+            {"value": "EARL", "label": "EARL (Exploitation Agricole à Responsabilité Limitée)"},
+            {"value": "GAEC", "label": "GAEC (Groupement Agricole d'Exploitation en Commun)"},
+            {"value": "SCEA", "label": "SCEA (Société Civile d'Exploitation Agricole)"},
+            {"value": "SA", "label": "SA (Société Anonyme)"},
+            {"value": "CUMA", "label": "CUMA (Coopérative d'Utilisation de Matériel Agricole)"},
+            {"value": "Coopérative", "label": "Coopérative"},
+            {"value": "Autre", "label": "Autre"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exploitation",
+      "titre": "Votre exploitation",
+      "description": "Caractéristiques de votre exploitation",
+      "ordre": 2,
+      "obligatoire": true,
+      "questions": [
+        {
+          "id": "sau_totale",
+          "type": "number",
+          "label": "Quelle est la Surface Agricole Utile (SAU) totale de votre exploitation ?",
+          "placeholder": "En hectares",
+          "unite": "hectares",
+          "required": true,
+          "ordre": 1,
+          "field_mapping": "sau_totale",
+          "coverage_percent": 80,
+          "help_text": "La SAU est utilisée dans de nombreuses aides pour calculer les montants",
+          "validation": {
+            "min": 0,
+            "max": 10000,
+            "error_message": "La SAU doit être comprise entre 0 et 10000 hectares"
+          }
+        },
+        {
+          "id": "productions",
+          "type": "multiselect",
+          "label": "Quelles sont vos productions principales ?",
+          "placeholder": "Sélectionnez une ou plusieurs productions",
+          "required": true,
+          "ordre": 2,
+          "field_mapping": "productions",
+          "coverage_percent": 100,
+          "help_text": "Vous pouvez sélectionner plusieurs productions",
+          "min_selections": 1,
+          "max_selections": 5,
+          "options": [
+            {"value": "Céréales", "label": "Céréales (blé, orge, maïs, colza...)"},
+            {"value": "Grandes cultures", "label": "Grandes cultures (oléagineux, protéagineux...)"},
+            {"value": "Élevage bovin", "label": "Élevage bovin (lait, viande)"},
+            {"value": "Élevage ovin", "label": "Élevage ovin (moutons, agneaux)"},
+            {"value": "Élevage caprin", "label": "Élevage caprin (chèvres)"},
+            {"value": "Élevage porcin", "label": "Élevage porcin"},
+            {"value": "Élevage avicole", "label": "Élevage avicole (poulets, volailles)"},
+            {"value": "Élevage laitier", "label": "Élevage laitier"},
+            {"value": "Viticulture", "label": "Viticulture (vignes, raisins)"},
+            {"value": "Maraîchage", "label": "Maraîchage (légumes)"},
+            {"value": "Arboriculture", "label": "Arboriculture (fruits, vergers)"},
+            {"value": "Horticulture", "label": "Horticulture (fleurs, plantes)"},
+            {"value": "Apiculture", "label": "Apiculture (miel, abeilles)"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "profil",
+      "titre": "Votre profil",
+      "description": "Informations sur vous en tant qu'agriculteur",
+      "ordre": 3,
+      "obligatoire": false,
+      "questions": [
+        {
+          "id": "age",
+          "type": "number",
+          "label": "Quel est votre âge ?",
+          "placeholder": "En années",
+          "required": false,
+          "ordre": 1,
+          "field_mapping": "age",
+          "coverage_percent": 12.6,
+          "help_text": "13% des aides ont des critères d'âge (notamment pour les Jeunes Agriculteurs)",
+          "validation": {
+            "min": 18,
+            "max": 120
+          },
+          "triggers": [
+            {
+              "condition": "value < 40",
+              "actions": [
+                {"type": "show", "target_questions": ["jeune_agriculteur"]},
+                {"type": "show", "target_questions": ["diplome"]},
+                {"type": "show", "target_questions": ["installation_recente"]}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "jeune_agriculteur",
+          "type": "radio",
+          "label": "Êtes-vous reconnu Jeune Agriculteur (JA) ?",
+          "required": false,
+          "ordre": 2,
+          "field_mapping": "jeune_agriculteur",
+          "coverage_percent": 12.6,
+          "help_text": "Statut JA = moins de 40 ans au moment de l'installation",
+          "visible_if": {
+            "question_id": "age",
+            "operator": "<",
+            "value": 40
+          },
+          "options": [
+            {"value": true, "label": "Oui, je suis reconnu Jeune Agriculteur"},
+            {"value": false, "label": "Non"}
+          ]
+        },
+        {
+          "id": "diplome",
+          "type": "select",
+          "label": "Quel est votre diplôme agricole le plus élevé ?",
+          "placeholder": "Sélectionnez votre diplôme",
+          "required": false,
+          "ordre": 3,
+          "field_mapping": "diplome",
+          "coverage_percent": 12.2,
+          "help_text": "12% des aides exigent un diplôme agricole minimum",
+          "visible_if": {
+            "question_id": "age",
+            "operator": "<",
+            "value": 50
+          },
+          "options": [
+            {"value": "CAP_AGRICOLE", "label": "CAP Agricole"},
+            {"value": "BAC_PRO", "label": "Bac Professionnel Agricole"},
+            {"value": "BTS", "label": "BTS Agricole"},
+            {"value": "LICENCE", "label": "Licence / Bachelor Agricole"},
+            {"value": "INGENIEUR", "label": "Ingénieur Agronome"},
+            {"value": "AUCUN", "label": "Aucun diplôme agricole"}
+          ]
+        },
+        {
+          "id": "installation_recente",
+          "type": "radio",
+          "label": "Vous êtes-vous installé(e) récemment (moins de 5 ans) ?",
+          "required": false,
+          "ordre": 4,
+          "field_mapping": "installation_recente",
+          "coverage_percent": 18.3,
+          "help_text": "18% des aides ciblent spécifiquement les installations récentes",
+          "visible_if": {
+            "question_id": "age",
+            "operator": "<",
+            "value": 50
+          },
+          "options": [
+            {"value": true, "label": "Oui, installé(e) depuis moins de 5 ans"},
+            {"value": false, "label": "Non, installé(e) depuis plus de 5 ans"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "labels",
+      "titre": "Labels et certifications",
+      "description": "Vos labels et engagements environnementaux",
+      "ordre": 4,
+      "obligatoire": true,
+      "importance": "CRITIQUE",
+      "questions": [
+        {
+          "id": "label_bio",
+          "type": "select",
+          "label": "Êtes-vous en agriculture biologique ?",
+          "placeholder": "Sélectionnez votre situation",
+          "required": true,
+          "ordre": 1,
+          "field_mapping": "label_bio",
+          "coverage_percent": 80.1,
+          "help_text": "⭐ CRITIQUE : 80% des aides (406/507) concernent le bio !",
+          "importance": "TRÈS HAUTE",
+          "options": [
+            {"value": "certifie", "label": "Oui, je suis certifié AB (Agriculture Biologique)"},
+            {"value": "conversion", "label": "En conversion vers le bio"},
+            {"value": "non", "label": "Non, agriculture conventionnelle"}
+          ],
+          "triggers": [
+            {
+              "condition": "value == 'certifie' || value == 'conversion'",
+              "actions": [
+                {"type": "show", "target_questions": ["sau_bio"]},
+                {"type": "show", "target_questions": ["date_conversion"]}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sau_bio",
+          "type": "number",
+          "label": "Quelle est votre SAU en agriculture biologique ?",
+          "placeholder": "En hectares",
+          "unite": "hectares",
+          "required": false,
+          "ordre": 2,
+          "field_mapping": "sau_bio",
+          "coverage_percent": 80.1,
+          "help_text": "SAU certifiée AB ou en conversion",
+          "visible_if": {
+            "question_id": "label_bio",
+            "operator": "in",
+            "values": ["certifie", "conversion"]
+          },
+          "validation": {
+            "min": 0,
+            "max_reference": "sau_totale",
+            "error_message": "La SAU bio ne peut pas dépasser la SAU totale"
+          }
+        },
+        {
+          "id": "date_conversion",
+          "type": "date",
+          "label": "Date de début de conversion bio (si en conversion)",
+          "required": false,
+          "ordre": 3,
+          "field_mapping": "date_conversion",
+          "coverage_percent": 80.1,
+          "visible_if": {
+            "question_id": "label_bio",
+            "operator": "==",
+            "value": "conversion"
+          },
+          "validation": {
+            "min_date": "2015-01-01",
+            "max_date": "today"
+          }
+        },
+        {
+          "id": "autres_labels",
+          "type": "multiselect",
+          "label": "Autres labels ou certifications (optionnel)",
+          "placeholder": "Sélectionnez vos labels",
+          "required": false,
+          "ordre": 4,
+          "field_mapping": "labels",
+          "coverage_percent": 20,
+          "help_text": "Ces labels peuvent vous donner accès à des aides spécifiques",
+          "options": [
+            {"value": "HVE", "label": "HVE - Haute Valeur Environnementale"},
+            {"value": "Label Rouge", "label": "Label Rouge"},
+            {"value": "AOC", "label": "AOC/AOP - Appellation d'Origine Contrôlée/Protégée"},
+            {"value": "IGP", "label": "IGP - Indication Géographique Protégée"},
+            {"value": "Demeter", "label": "Demeter (biodynamie)"},
+            {"value": "Nature & Progrès", "label": "Nature & Progrès"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "projets",
+      "titre": "Vos projets",
+      "description": "Projets actuels ou à venir dans les 2 prochaines années",
+      "ordre": 5,
+      "obligatoire": true,
+      "questions": [
+        {
+          "id": "types_projets",
+          "type": "multiselect",
+          "label": "Quels sont vos projets actuels ou à venir ?",
+          "placeholder": "Sélectionnez un ou plusieurs projets",
+          "required": true,
+          "ordre": 1,
+          "field_mapping": "projets_en_cours",
+          "coverage_percent": 100,
+          "help_text": "Les aides varient énormément selon le type de projet",
+          "min_selections": 1,
+          "max_selections": 10,
+          "options": [
+            {"value": "Installation", "label": "Installation (première installation)", "icon": "🌱"},
+            {"value": "Modernisation", "label": "Modernisation de l'exploitation", "icon": "🔧"},
+            {"value": "Diversification", "label": "Diversification des activités", "icon": "🌈"},
+            {"value": "Conversion bio", "label": "Conversion à l'agriculture biologique", "icon": "🌿"},
+            {"value": "Énergie", "label": "Transition énergétique / énergies renouvelables", "icon": "⚡"},
+            {"value": "Matériel", "label": "Investissement matériel / équipements", "icon": "🚜"},
+            {"value": "Bâtiment", "label": "Construction / rénovation de bâtiments", "icon": "🏗️"},
+            {"value": "Irrigation", "label": "Irrigation / gestion de l'eau", "icon": "💧"},
+            {"value": "Bien-être animal", "label": "Amélioration du bien-être animal", "icon": "🐄"},
+            {"value": "Commercialisation", "label": "Circuits courts / commercialisation", "icon": "🛒"},
+            {"value": "Numérique", "label": "Transformation numérique", "icon": "💻"},
+            {"value": "Formation", "label": "Formation / développement de compétences", "icon": "📚"}
+          ]
+        }
+      ]
+    }
+  ],
+  "conditional_logic": {
+    "description": "Logique conditionnelle pour afficher/masquer des questions",
+    "rules": [
+      {
+        "trigger_question": "age",
+        "condition": "value < 40",
+        "show_questions": ["jeune_agriculteur", "diplome", "installation_recente"]
+      },
+      {
+        "trigger_question": "label_bio",
+        "condition": "value != 'non'",
+        "show_questions": ["sau_bio", "date_conversion"]
+      },
+      {
+        "trigger_question": "productions",
+        "condition": "includes('Élevage bovin') || includes('Élevage ovin') || includes('Élevage porcin')",
+        "show_questions": ["bien_etre_animal_details"]
+      }
+    ]
+  },
+  "validation_rules": {
+    "cross_field": [
+      {
+        "rule": "sau_bio <= sau_totale",
+        "error_message": "La SAU bio ne peut pas dépasser la SAU totale"
+      }
+    ]
+  },
+  "mapping_to_profil_v2": {
+    "region": "region",
+    "departement": "departement",
+    "statut_juridique": "statut_juridique",
+    "sau_totale": "sau_totale",
+    "sau_bio": "sau_bio",
+    "productions": "productions",
+    "age": "age",
+    "jeune_agriculteur": "jeune_agriculteur",
+    "diplome": "diplome",
+    "label_bio": "label_bio",
+    "labels": "labels",
+    "types_projets": "projets_en_cours"
+  }
+}
