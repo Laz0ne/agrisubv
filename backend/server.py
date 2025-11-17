@@ -654,7 +654,7 @@ async def analyze_criteria():
     """Analyse les 507 aides pour extraire tous les critères d'éligibilité"""
     return await analyze_criteria_handler()
 
-@api_router.get("/questionnaire/config")
+@api_router.api_route("/questionnaire/config", methods=["GET", "HEAD"])
 async def get_questionnaire():
     """Retourne la configuration du questionnaire dynamique"""
     return await get_questionnaire_config()
