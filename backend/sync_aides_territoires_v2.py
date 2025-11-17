@@ -10,6 +10,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import logging
 import re
+import os
+from dotenv import load_dotenv
 
 from models_v2 import (
     AideAgricoleV2, CriteresEligibilite, MontantAide,
@@ -19,9 +21,18 @@ from models_v2 import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
+
+# API Token (X-AUTH-TOKEN)
+API_TOKEN = os.environ.get('AIDES_TERRITOIRES_API_TOKEN', '')
+
 # Configuration API
 AIDES_TERRITOIRES_API_URL = "https://aides-territoires.beta.gouv.fr/api/aids/"
 AIDES_TERRITOIRES_BASE_URL = "https://aides-territoires.beta.gouv.fr"
+
+# Authentication URL
+CONNEXION_URL = "https://aides-territoires.beta.gouv.fr/api/connexion/"
 
 
 class AidesTerritoiresSync:
@@ -88,6 +99,44 @@ class AidesTerritoiresSync:
         self.session = None
         self.last_request_time = 0
     
+    async def get_bearer_token(self) -> Optional[str]:
+        """
+        Obtient un Bearer Token en utilisant le X-AUTH-TOKEN
+        
+        Returns:
+            Bearer Token (valable 24h) ou None en cas d'erreur
+        """
+        if not API_TOKEN:
+            logger.error("❌ AIDES_TERRITOIRES_API_TOKEN non configuré")
+            return None
+        
+        headers = {
+            'User-Agent': 'AgriSubv/2.0 (https://agrisubv.onrender.com)',
+            'X-AUTH-TOKEN': API_TOKEN,
+        }
+        
+        try:
+            logger.info("🔐 Authentification auprès d'Aides-Territoires...")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(CONNEXION_URL, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        bearer_token = data.get('token')
+                        if bearer_token:
+                            logger.info("✅ Bearer Token obtenu avec succès")
+                            return bearer_token
+                        else:
+                            logger.error("❌ Token non trouvé dans la réponse")
+                            return None
+                    else:
+                        logger.error(f"❌ Erreur authentification: HTTP {response.status}")
+                        error_text = await response.text()
+                        logger.error(f"   Détails: {error_text[:200]}")
+                        return None
+        except Exception as e:
+            logger.error(f"❌ Exception lors de l'authentification: {e}")
+            return None
+    
     async def _rate_limit(self):
         """Applique le rate limiting"""
         elapsed = time.time() - self.last_request_time
@@ -101,7 +150,7 @@ class AidesTerritoiresSync:
         max_pages: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        Récupère les aides de manière paginée avec rate limiting
+        Récupère les aides de manière paginée avec authentification Bearer
         
         Args:
             max_pages: Nombre maximum de pages à récupérer (None = toutes)
@@ -109,12 +158,19 @@ class AidesTerritoiresSync:
         Returns:
             Liste des aides brutes
         """
+        # Obtenir le Bearer Token
+        bearer_token = await self.get_bearer_token()
+        if not bearer_token:
+            logger.error("❌ Impossible de continuer sans Bearer Token")
+            return []
+        
         all_aides = []
         page = 1
         
         headers = {
             'User-Agent': 'AgriSubv/2.0 (https://agrisubv.onrender.com)',
             'Accept': 'application/json',
+            'Authorization': f'Bearer {bearer_token}',
         }
         
         async with aiohttp.ClientSession(headers=headers) as session:
@@ -137,8 +193,19 @@ class AidesTerritoiresSync:
                 try:
                     logger.info(f"🔄 Récupération page {page}...")
                     async with session.get(AIDES_TERRITOIRES_API_URL, params=params) as response:
+                        if response.status == 401:
+                            logger.error(f"❌ Token expiré ou invalide (401)")
+                            # Réessayer avec un nouveau token
+                            bearer_token = await self.get_bearer_token()
+                            if not bearer_token:
+                                break
+                            headers['Authorization'] = f'Bearer {bearer_token}'
+                            continue
+                        
                         if response.status != 200:
                             logger.error(f"❌ Erreur HTTP {response.status} page {page}")
+                            error_text = await response.text()
+                            logger.error(f"   Détails: {error_text[:200]}")
                             break
                         
                         data = await response.json()
