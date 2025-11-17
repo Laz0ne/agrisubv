@@ -14,7 +14,7 @@ export default function QuestionNumber({ question, value, onChange, error }) {
         <input
           type="number"
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : null)}
           placeholder={question.placeholder}
           min={question.validation?.min}
           max={question.validation?.max}
