@@ -480,24 +480,26 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
         engine = MatchingEngine()
         
         # Calculer le matching pour chaque aide
+                # Calculer le matching pour chaque aide
+        resultats = []
         for aide_data in aides:
-    try:
-        aide = AideAgricoleV2(**aide_data)
-        resultat = engine.calculate_match(aide, profil)
-        
-        # ✅ ENRICHIR le résultat avec les infos complètes de l'aide
-        resultat_dict = resultat.model_dump()
-        resultat_dict['aide'] = {
-            'aid_id': aide.aid_id,
-            'titre': aide.titre,
-            'description': aide.description,
-            'url': aide.source_url or aide.lien_officiel,
-            'type_aide': aide.tags[:3] if aide.tags else [],
-            'organisme': aide.organisme,
-            'source': aide.source
-        }
-        
-        resultats.append(resultat_dict)
+            try:
+                aide = AideAgricoleV2(**aide_data)
+                resultat = engine.calculate_match(aide, profil)
+                
+                # ✅ ENRICHIR le résultat avec les infos complètes de l'aide
+                resultat_dict = resultat.model_dump()
+                resultat_dict['aide'] = {
+                    'aid_id': aide.aid_id,
+                    'titre': aide.titre,
+                    'description': aide.description,
+                    'url': aide.source_url or aide.lien_officiel,
+                    'type_aide': aide.tags[:3] if aide.tags else [],
+                    'organisme': aide.organisme,
+                    'source': aide.source
+                }
+                
+                resultats.append(resultat_dict)
                 
             except Exception as e:
                 logger.error(f"   ❌ Erreur matching aide {aide_data.get('aid_id')}: {e}")
