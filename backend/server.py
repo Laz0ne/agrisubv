@@ -538,7 +538,7 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
             "aides_non_eligibles": len(aides_non_eligibles),
             "montant_total_estime_min": round(montant_total_min, 2),
             "montant_total_estime_max": round(montant_total_max, 2),
-            "resultats": [r.model_dump() for r in resultats]
+            "resultats": resultats
         }
         
     except Exception as e:
