@@ -1,116 +1,81 @@
-import React, { useState } from 'react';
-import { Header } from './components/layout/Header';
-import { HeroSection } from './components/layout/HeroSection';
-import { HowItWorks } from './components/home/HowItWorks';
-import { FAQ } from './components/home/FAQ';
-import { Footer } from './components/layout/Footer';
-import { WizardForm } from './components/wizard/WizardForm';
-import { ResultsSection } from './components/results/ResultsSection';
-import './styles/variables.css';
-import './styles/animations.css';
+import { useState } from 'react';
+import DynamicQuestionnaire from './components/DynamicQuestionnaire';
+import ResultsPage from './components/ResultsPage';
 import './App.css';
 
 function App() {
-  const [showWizard, setShowWizard] = useState(false);
+  const [step, setStep] = useState('welcome'); // 'welcome', 'questionnaire', 'results'
   const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [profil, setProfil] = useState(null);
 
-  const handleStartSimulation = () => {
-    setShowWizard(true);
-    // Scroll vers le wizard avec offset pour le header fixe
-    setTimeout(() => {
-      const wizardElement = document.querySelector('.wizard-container');
-      if (wizardElement) {
-        const yOffset = -100; // Offset pour le header fixe
-        const y = wizardElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
-    }, 100);
+  const handleStart = () => {
+    setStep('questionnaire');
   };
 
-  const handleWizardComplete = async (formData) => {
-    setLoading(true);
-    
-    try {
-      const response = await fetch('https://agrisubv-backend.onrender.com/api/matching', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des aides');
-      }
-
-      const data = await response.json();
-      setResults(data);
-      
-      // Scroll vers les résultats avec offset pour le header fixe
-      setTimeout(() => {
-        const resultsElement = document.querySelector('.results-container');
-        if (resultsElement) {
-          const yOffset = -100;
-          const y = resultsElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Une erreur est survenue. Veuillez réessayer.');
-    } finally {
-      setLoading(false);
-    }
+  const handleComplete = (matchingResults, userProfil) => {
+    setResults(matchingResults);
+    setProfil(userProfil);
+    setStep('results');
   };
 
-  return (
-    <div className="app">
-      {/* Bande décorative sous le header */}
-      <div className="decorative-band"></div>
+  const handleRestart = () => {
+    setResults(null);
+    setProfil(null);
+    setStep('welcome');
+  };
 
-      <Header />
-      
-      {!showWizard && !results && (
-        <>
-          <HeroSection onStart={handleStartSimulation} />
-          <HowItWorks onStart={handleStartSimulation} />
-          <FAQ />
-        </>
-      )}
-      
-      {showWizard && !results && (
-        <WizardForm onComplete={handleWizardComplete} />
-      )}
-      
-      {loading && (
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Analyse de vos critères en cours...</p>
-        </div>
-      )}
-      
-      {results && (
-        <>
-          <ResultsSection results={results} />
-          <div className="restart-container">
-            <button 
-              className="btn-primary"
-              onClick={() => {
-                setShowWizard(false);
-                setResults(null);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+  if (step === 'welcome') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4">
+        <div className="max-w-2xl text-center">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            🌾 AgriSubv
+          </h1>
+          <p className="text-xl text-gray-700 mb-8">
+            Trouvez toutes les aides agricoles auxquelles vous êtes éligible en 5 minutes
+          </p>
+          <div className="bg-white rounded-lg shadow-xl p-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="text-center">
+                <div className="text-4xl mb-2">📋</div>
+                <div className="font-semibold">15 questions</div>
+                <div className="text-sm text-gray-600">Questionnaire simple</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-2">🎯</div>
+                <div className="font-semibold">507 aides</div>
+                <div className="text-sm text-gray-600">Base complète</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-2">⏱️</div>
+                <div className="font-semibold">5 minutes</div>
+                <div className="text-sm text-gray-600">Résultats rapides</div>
+              </div>
+            </div>
+            <button
+              onClick={handleStart}
+              className="w-full bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
             >
-              🔄 Nouvelle simulation
+              Commencer le questionnaire 🚀
             </button>
           </div>
-        </>
-      )}
-      
-      <Footer />
-    </div>
-  );
+          <p className="text-sm text-gray-600">
+            ⭐ Basé sur l'analyse de 507 aides agricoles • 80% des aides concernent le bio
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'questionnaire') {
+    return <DynamicQuestionnaire onComplete={handleComplete} />;
+  }
+
+  if (step === 'results') {
+    return <ResultsPage results={results} profil={profil} onRestart={handleRestart} />;
+  }
+
+  return null;
 }
 
 export default App;
