@@ -711,7 +711,7 @@ async def sync_datagouv_pac(limit: Optional[int] = None):
 
 from sync_aides_territoires_v2 import sync_aides_territoires_v2
 
-@api_router.post("/sync/aides-territoires-v2")
+@api_router.api_route("/sync/aides-territoires-v2", methods=["GET", "POST"])
 async def sync_aides_territoires_v2_endpoint(max_pages: Optional[int] = None):
     try:
         result = await sync_aides_territoires_v2(db, max_pages=max_pages)
