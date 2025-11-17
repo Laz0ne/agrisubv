@@ -82,10 +82,10 @@ async def export_aides_handler():
             exported_aids = []
             
             for aid in all_aids:
-                # Nettoyer le HTML
-                soup_desc = BeautifulSoup(aid.get("description", ""), 'html.parser')
-                soup_elig = BeautifulSoup(aid.get("eligibility", ""), 'html.parser')
-                soup_contact = BeautifulSoup(aid.get("contact", ""), 'html.parser')
+                # Nettoyer le HTML (gérer les None)
+                soup_desc = BeautifulSoup(aid.get("description") or "", 'html.parser')
+                soup_elig = BeautifulSoup(aid.get("eligibility") or "", 'html.parser')
+                soup_contact = BeautifulSoup(aid.get("contact") or "", 'html.parser')
                 
                 # Extraire le premier financeur
                 financeurs = aid.get("financers", [])
@@ -224,7 +224,7 @@ async def export_aides_handler():
                         "productions_eligibles": ["cereales", "oleagineux", "proteagineux", "elevage_bovin", "elevage_ovin", "elevage_porcin", "elevage_volaille", "viticulture", "maraichage", "arboriculture", "horticulture", "apiculture", "toutes"],
                         "statuts_juridiques": ["individuel", "EARL", "GAEC", "SCEA", "SCA", "tous"],
                         "types_projets": ["installation", "modernisation", "diversification", "conversion_bio", "transition_energetique", "agritourisme", "circuit_court", "investissement_materiel"],
-                        "diplome_requis": ["CAP_AGRICOLE", "BAC_PRO", "BTS", "LICENCE", "INGENIEUR", null]
+                        "diplome_requis": ["CAP_AGRICOLE", "BAC_PRO", "BTS", "LICENCE", "INGENIEUR", None]
                     }
                 },
                 
