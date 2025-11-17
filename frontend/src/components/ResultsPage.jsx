@@ -36,11 +36,14 @@ export default function ResultsPage({ results, profil, onRestart }) {
             ✅ Aides auxquelles vous êtes éligible ({aidesEligibles.length})
           </h2>
           <div className="space-y-4">
-            {aidesEligibles.map((resultat, index) => (
-              <div key={index} className="bg-white border-l-4 border-green-500 rounded-lg shadow p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {resultat.aide.titre}
+           {aidesEligibles.map((resultat, index) => {
+  const aide = resultat.aide || resultat; // Support des deux formats
+  
+  return (
+    <div key={index} className="bg-white border-l-4 border-green-500 rounded-lg shadow p-6">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {aide.titre || 'Titre non disponible'}
                   </h3>
                   <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                     Score: {resultat.score}/100
