@@ -20,13 +20,16 @@ logger = logging.getLogger(__name__)
 # Imports pour matching V2
 from matching_engine import MatchingEngine
 from models_v2 import (
-    ProfilAgriculteur,  # ← CORRIGÉ : Pas d'alias, c'est déjà le modèle V2
+    ProfilAgriculteur,
     ResultatMatching, 
     AideAgricoleV2,
     StatutJuridique,
     TypeProduction,
     TypeProjet
 )
+
+# Import exploration Aides-Territoires
+from explore_aides_endpoint import explore_aides_territoires_handler
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -202,17 +205,17 @@ def convert_legacy_to_v2(legacy: ProfilAgriculteurLegacy) -> ProfilAgriculteur:
     return ProfilAgriculteur(
         profil_id=legacy.profil_id,
         region=legacy.region,
-        departement=legacy.departement or "00",  # Défaut si non fourni
+        departement=legacy.departement or "00",
         statut_juridique=statut,
-        sau_totale=legacy.superficie_ha,  # ← Renommage du champ
+        sau_totale=legacy.superficie_ha,
         sau_bio=legacy.superficie_ha if is_bio else 0.0,
-        productions=productions_v2,  # ← Liste d'Enums
+        productions=productions_v2,
         production_principale=productions_v2[0] if productions_v2 else None,
         age=legacy.age_exploitant,
         jeune_agriculteur=legacy.jeune_agriculteur,
         labels=legacy.labels,
         label_bio=is_bio,
-        projets_en_cours=projets_v2,  # ← Renommage du champ
+        projets_en_cours=projets_v2,
         created_at=legacy.created_at
     )
 
@@ -443,11 +446,11 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
         if "superficie_ha" in profil_data:
             logger.info("🔄 Détection format LEGACY (frontend), conversion en V2...")
             legacy_profil = ProfilAgriculteurLegacy(**profil_data)
-            profil = convert_legacy_to_v2(legacy_profil)  # ← Utilise ProfilAgriculteur (le V2)
+            profil = convert_legacy_to_v2(legacy_profil)
             logger.info(f"✅ Conversion réussie")
         else:
             logger.info("✅ Format V2 détecté directement")
-            profil = ProfilAgriculteur(**profil_data)  # ← CORRIGÉ : Utilise ProfilAgriculteur directement
+            profil = ProfilAgriculteur(**profil_data)
         
         logger.info(f"🎯 Matching V2 pour: {profil.region}, {profil.statut_juridique.value}")
         
@@ -632,6 +635,11 @@ async def get_migration_status():
             "status": "error",
             "message": "Erreur vérification statut"
         }
+
+@api_router.get("/admin/explore-aides-territoires")
+async def explore_aides_territoires():
+    """Explore l'API Aides-Territoires pour identifier les aides agricoles"""
+    return await explore_aides_territoires_handler()
 
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
