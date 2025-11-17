@@ -28,8 +28,9 @@ from models_v2 import (
     TypeProjet
 )
 
-# Import exploration Aides-Territoires
+# Import exploration et export Aides-Territoires
 from explore_aides_endpoint import explore_aides_territoires_handler
+from export_aides_endpoint import export_aides_handler
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -640,6 +641,11 @@ async def get_migration_status():
 async def explore_aides_territoires():
     """Explore l'API Aides-Territoires pour identifier les aides agricoles"""
     return await explore_aides_territoires_handler()
+
+@api_router.get("/admin/export-aides-agricoles")
+async def export_aides_agricoles():
+    """Exporte toutes les 507 aides agricoles en JSON pour enrichissement manuel"""
+    return await export_aides_handler()
 
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
