@@ -252,7 +252,12 @@ class AidesTerritoiresSync:
         desc = aide_data.get('description')
         description = str(desc).lower() if desc is not None else ''
         
-        categories = ' '.join(aide_data.get('categories', [])).lower()
+        # Gestion robuste des categories (liste de strings)
+        categories_raw = aide_data.get('categories', [])
+        if isinstance(categories_raw, list):
+            categories = ' '.join([str(c) for c in categories_raw if c]).lower()
+        else:
+            categories = ''
         
         all_text = f"{titre} {description} {categories}"
         
@@ -280,10 +285,14 @@ class AidesTerritoiresSync:
         name = aide_data.get('name')
         titre = str(name).lower() if name is not None else ''
         
-        categories = aide_data.get('categories', [])
-        aid_types = aide_data.get('aid_types', [])
+        # Gestion robuste des categories et aid_types (listes de strings)
+        categories_raw = aide_data.get('categories', [])
+        categories_str = ' '.join([str(c) for c in categories_raw if c]) if isinstance(categories_raw, list) else ''
         
-        all_text = f"{titre} {' '.join(categories)} {' '.join(aid_types)}".lower()
+        aid_types_raw = aide_data.get('aid_types', [])
+        aid_types_str = ' '.join([str(a) for a in aid_types_raw if a]) if isinstance(aid_types_raw, list) else ''
+        
+        all_text = f"{titre} {categories_str} {aid_types_str}".lower()
         
         # Détection par mapping
         for keyword, type_projet in self.CATEGORIE_TO_PROJET.items():
@@ -420,6 +429,12 @@ class AidesTerritoiresSync:
         id_externe = str(aide_data.get('id', ''))
         aid_id = f"AT-{id_externe}"
         
+        # Log de debug pour tracer les types de données
+        logger.debug(f"🔍 Normalisation aide {aid_id}:")
+        logger.debug(f"   recurrence type: {type(aide_data.get('recurrence'))}")
+        logger.debug(f"   financers type: {type(aide_data.get('financers'))}")
+        logger.debug(f"   programs type: {type(aide_data.get('programs'))}")
+        
         # Informations de base
         titre = aide_data.get('name') or 'Aide sans titre'
         if not isinstance(titre, str):
@@ -429,20 +444,30 @@ class AidesTerritoiresSync:
         if not isinstance(description, str):
             description = str(description)
 
-        # Organisme (gestion robuste)
+        # Organisme (préférer financers_full si disponible, sinon financers)
+        financers_full = aide_data.get('financers_full', [])
         financers = aide_data.get('financers', [])
-        if financers and isinstance(financers, list):
-            organisme_parts = []
-            for f in financers:
+        
+        organisme_parts = []
+        
+        # Priorité à financers_full (liste de dicts avec plus d'infos)
+        if financers_full and isinstance(financers_full, list):
+            for f in financers_full:
                 if isinstance(f, dict):
                     name = f.get('name', '')
                     if name:
                         organisme_parts.append(name)
-                elif isinstance(f, str):
+        # Sinon utiliser financers (liste de strings)
+        elif financers and isinstance(financers, list):
+            for f in financers:
+                if isinstance(f, str) and f:
                     organisme_parts.append(f)
-            organisme = ', '.join(organisme_parts) if organisme_parts else 'Non spécifié'
-        else:
-            organisme = 'Non spécifié'
+                elif isinstance(f, dict):
+                    name = f.get('name', '')
+                    if name:
+                        organisme_parts.append(name)
+        
+        organisme = ', '.join(organisme_parts) if organisme_parts else 'Non spécifié'
         
         # Programme (gestion robuste)
         programmes = aide_data.get('programs', [])
@@ -464,7 +489,20 @@ class AidesTerritoiresSync:
         
         # Dates
         date_debut = aide_data.get('start_date')
-        date_fin = aide_data.get('recurrence', {}).get('end_date') if aide_data.get('recurrence') else None
+        
+        # Gestion robuste de recurrence (peut être string ou dict)
+        recurrence = aide_data.get('recurrence')
+        if recurrence:
+            if isinstance(recurrence, dict):
+                date_fin = recurrence.get('end_date')
+            elif isinstance(recurrence, str):
+                # Si c'est "Permanente", pas de date de fin
+                date_fin = None
+            else:
+                date_fin = None
+        else:
+            date_fin = None
+        
         date_limite = aide_data.get('submission_deadline')
         
         # Statut
@@ -506,8 +544,15 @@ class AidesTerritoiresSync:
             plafond=montant_max
         )
         
-        # Tags
-        tags = aide_data.get('categories', []) + aide_data.get('aid_types', [])
+        # Tags depuis categories (liste de strings) et aid_types
+        categories = aide_data.get('categories', [])
+        aid_types = aide_data.get('aid_types', [])
+        
+        tags = []
+        if isinstance(categories, list):
+            tags.extend([str(c) for c in categories if c])
+        if isinstance(aid_types, list):
+            tags.extend([str(a) for a in aid_types if a])
         
         # Construction de l'aide V2
         aide_v2 = AideAgricoleV2(
