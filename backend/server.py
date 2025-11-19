@@ -723,7 +723,7 @@ async def sync_datagouv_pac(limit: Optional[int] = None):
         logger.error(f"Erreur sync PAC: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-from sync_aides_territoires_v2 import sync_aides_territoires_v2
+from sync_aides_territoires_v2 import sync_aides_territoires_v2, debug_first_aide
 
 @api_router.api_route("/sync/aides-territoires-v2", methods=["GET", "POST"])
 async def sync_aides_territoires_v2_endpoint(max_pages: Optional[int] = None):
@@ -732,6 +732,18 @@ async def sync_aides_territoires_v2_endpoint(max_pages: Optional[int] = None):
         return result
     except Exception as e:
         logger.error(f"Erreur sync V2: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/debug/first-aide")
+async def debug_first_aide_endpoint():
+    """
+    Endpoint de debug pour analyser la première aide
+    """
+    try:
+        result = await debug_first_aide(db)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur debug first aide: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============ APP CONFIGURATION ============

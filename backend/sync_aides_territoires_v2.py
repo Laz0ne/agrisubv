@@ -245,9 +245,13 @@ class AidesTerritoiresSync:
         """
         productions = []
         
-        # Texte à analyser
-        titre = aide_data.get('name', '').lower()
-        description = aide_data.get('description', '').lower()
+        # Texte à analyser (gestion robuste des None et non-strings)
+        name = aide_data.get('name')
+        titre = str(name).lower() if name is not None else ''
+        
+        desc = aide_data.get('description')
+        description = str(desc).lower() if desc is not None else ''
+        
         categories = ' '.join(aide_data.get('categories', [])).lower()
         
         all_text = f"{titre} {description} {categories}"
@@ -272,8 +276,10 @@ class AidesTerritoiresSync:
         """
         projets = []
         
-        # Texte à analyser
-        titre = aide_data.get('name', '').lower()
+        # Texte à analyser (gestion robuste des None et non-strings)
+        name = aide_data.get('name')
+        titre = str(name).lower() if name is not None else ''
+        
         categories = aide_data.get('categories', [])
         aid_types = aide_data.get('aid_types', [])
         
@@ -329,7 +335,8 @@ class AidesTerritoiresSync:
         Returns:
             Tuple (type_montant, montant_min, montant_max, taux_min, taux_max)
         """
-        montant_str = aide_data.get('subvention_rate', '') or aide_data.get('aid_amount', '')
+        montant_raw = aide_data.get('subvention_rate') or aide_data.get('aid_amount') or ''
+        montant_str = str(montant_raw) if montant_raw else ''
         
         type_montant = TypeMontant.FORFAITAIRE
         montant_min = None
@@ -379,7 +386,8 @@ class AidesTerritoiresSync:
         Returns:
             Dictionnaire avec les critères extraits
         """
-        eligibility_text = aide_data.get('eligibility', '').lower()
+        eligibility = aide_data.get('eligibility')
+        eligibility_text = str(eligibility).lower() if eligibility is not None else ''
         
         criteria = {
             'jeune_agriculteur': None,
@@ -413,16 +421,41 @@ class AidesTerritoiresSync:
         aid_id = f"AT-{id_externe}"
         
         # Informations de base
-        titre = aide_data.get('name', 'Aide sans titre')
-        description = aide_data.get('description', '')
-        
-        # Organisme
+        titre = aide_data.get('name') or 'Aide sans titre'
+        if not isinstance(titre, str):
+            titre = str(titre)
+            
+        description = aide_data.get('description') or ''
+        if not isinstance(description, str):
+            description = str(description)
+
+        # Organisme (gestion robuste)
         financers = aide_data.get('financers', [])
-        organisme = ', '.join([f.get('name', '') for f in financers]) if financers else 'Non spécifié'
+        if financers and isinstance(financers, list):
+            organisme_parts = []
+            for f in financers:
+                if isinstance(f, dict):
+                    name = f.get('name', '')
+                    if name:
+                        organisme_parts.append(name)
+                elif isinstance(f, str):
+                    organisme_parts.append(f)
+            organisme = ', '.join(organisme_parts) if organisme_parts else 'Non spécifié'
+        else:
+            organisme = 'Non spécifié'
         
-        # Programme
+        # Programme (gestion robuste)
         programmes = aide_data.get('programs', [])
-        programme = programmes[0] if programmes else ''
+        if programmes and isinstance(programmes, list):
+            # Peut être une liste de strings ou de dicts
+            if programmes and isinstance(programmes[0], dict):
+                programme = programmes[0].get('name', '') or programmes[0].get('slug', '')
+            elif programmes and isinstance(programmes[0], str):
+                programme = programmes[0]
+            else:
+                programme = ''
+        else:
+            programme = ''
         
         # URL
         url = aide_data.get('url', '')
@@ -574,7 +607,18 @@ class AidesTerritoiresSync:
                 if i % 50 == 0:
                     logger.info(f"   ✅ {i}/{len(aides_brutes)} normalisées")
             except Exception as e:
-                logger.error(f"   ❌ Erreur normalisation aide {i}: {e}")
+                # Logs détaillés pour les 5 premières erreurs
+                if erreurs_normalisation < 5:
+                    import traceback
+                    logger.error(f"\n❌ ERREUR DÉTAILLÉE #{erreurs_normalisation + 1}:")
+                    logger.error(f"   Aide ID: {aide_brute.get('id')}")
+                    logger.error(f"   Aide Name: {aide_brute.get('name', 'N/A')}")
+                    logger.error(f"   Type erreur: {type(e).__name__}")
+                    logger.error(f"   Message: {e}")
+                    logger.error(f"   Traceback: {traceback.format_exc()}")
+                elif erreurs_normalisation == 5:
+                    logger.error(f"   ... (logs détaillés désactivés après 5 erreurs)")
+                
                 erreurs_normalisation += 1
         
         logger.info(f"   ✅ {len(aides_v2)} aides normalisées")
@@ -634,6 +678,66 @@ async def sync_aides_territoires_v2(db, max_pages: Optional[int] = None) -> Dict
     """
     syncer = AidesTerritoiresSync(db)
     return await syncer.sync(max_pages)
+
+
+async def debug_first_aide(db) -> Dict[str, Any]:
+    """
+    Récupère et analyse la première aide pour debug
+    
+    Returns:
+        Informations détaillées sur la première aide
+    """
+    syncer = AidesTerritoiresSync(db)
+    
+    # Récupérer seulement la première page (50 aides max)
+    logger.info("🔍 Mode DEBUG: Récupération de la première page...")
+    aides_brutes = await syncer.fetch_aides_paginated(max_pages=1)
+    
+    if not aides_brutes:
+        return {
+            'success': False,
+            'message': 'Aucune aide récupérée'
+        }
+    
+    # Analyser la première aide
+    premiere_aide = aides_brutes[0]
+    
+    logger.info(f"\n📋 STRUCTURE DE LA PREMIÈRE AIDE:")
+    logger.info(f"   Clés présentes: {list(premiere_aide.keys())}")
+    logger.info(f"   ID: {premiere_aide.get('id')}")
+    logger.info(f"   Name: {premiere_aide.get('name')}")
+    logger.info(f"   Financers type: {type(premiere_aide.get('financers'))}")
+    logger.info(f"   Financers: {premiere_aide.get('financers')}")
+    logger.info(f"   Programs type: {type(premiere_aide.get('programs'))}")
+    logger.info(f"   Programs: {premiere_aide.get('programs')}")
+    logger.info(f"   Perimeter type: {type(premiere_aide.get('perimeter'))}")
+    logger.info(f"   Perimeter: {premiere_aide.get('perimeter')}")
+    
+    # Tenter la normalisation avec logs détaillés
+    logger.info(f"\n🔄 TENTATIVE DE NORMALISATION...")
+    try:
+        aide_v2 = syncer.normalize_aide(premiere_aide)
+        logger.info(f"   ✅ SUCCÈS: {aide_v2.titre}")
+        return {
+            'success': True,
+            'aide_brute': premiere_aide,
+            'aide_normalisee': aide_v2.model_dump(),
+            'message': 'Normalisation réussie'
+        }
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"   ❌ ÉCHEC: {e}")
+        logger.error(f"   Traceback complet:\n{error_trace}")
+        
+        return {
+            'success': False,
+            'aide_brute': premiere_aide,
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': error_trace,
+            'message': f'Erreur de normalisation: {e}'
+        }
 
 
 if __name__ == "__main__":
