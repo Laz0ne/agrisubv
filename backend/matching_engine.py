@@ -244,7 +244,7 @@ class MatchingEngine:
         
         types_prod = aide.criteres.types_production
         
-        # Si pas de restriction de production
+        # Si pas de restriction de production → tous types acceptés
         if not types_prod:
             details.append(DetailCritere(
                 nom="Type de production",
@@ -255,6 +255,18 @@ class MatchingEngine:
                 explication="✅ Tous types de production acceptés"
             ))
             return self.POIDS_PRODUCTION, details, False
+        
+        # Si le profil n'a pas de productions renseignées → ne pas bloquer mais donner 0 points
+        if not profil.productions:
+            details.append(DetailCritere(
+                nom="Type de production",
+                valide=False,
+                bloquant=False,  # ⚠️ Ne pas bloquer si non renseigné
+                points=0.0,
+                points_max=self.POIDS_PRODUCTION,
+                explication="⚠️ Productions non renseignées dans votre profil"
+            ))
+            return 0.0, details, False  # False = non bloquant
         
         # Vérification correspondance
         correspondances = [p for p in profil.productions if p in types_prod]
@@ -271,14 +283,14 @@ class MatchingEngine:
             score = self.POIDS_PRODUCTION
         else:
             prod_requises = ', '.join([p.value for p in types_prod])
-            prod_profil = ', '.join([p.value for p in profil.productions]) if profil.productions else "Aucune"
+            prod_profil = ', '.join([p.value for p in profil.productions])
             details.append(DetailCritere(
                 nom="Type de production",
                 valide=False,
                 bloquant=True,
                 points=0.0,
                 points_max=self.POIDS_PRODUCTION,
-                explication=f"❌ Aucune production éligible. Requises: {prod_requises}. Vos productions: {prod_profil}"
+                explication=f"❌ Productions non éligibles. Requises: {prod_requises}. Vos productions: {prod_profil}"
             ))
             bloquant = True
         

@@ -151,6 +151,7 @@ class AidesTerritoiresSync:
     ) -> List[Dict[str, Any]]:
         """
         Récupère les aides de manière paginée avec authentification Bearer
+        Récupère plusieurs catégories pour couvrir toutes les aides agricoles
         
         Args:
             max_pages: Nombre maximum de pages à récupérer (None = toutes)
@@ -165,7 +166,26 @@ class AidesTerritoiresSync:
             return []
         
         all_aides = []
-        page = 1
+        seen_ids = set()  # Pour éviter les doublons
+        
+        # Catégories et mots-clés pour récupérer toutes les aides agricoles
+        search_configs = [
+            {'categories': 'agriculture'},
+            {'categories': 'nature-environnement', 'text': 'agricole'},
+            {'categories': 'nature-environnement', 'text': 'exploitation'},
+            {'categories': 'developpement-rural'},
+            {'categories': 'eau-assainissement', 'text': 'irrigation'},
+            {'categories': 'eau-assainissement', 'text': 'agricole'},
+            {'categories': 'energie', 'text': 'agricole'},
+            {'categories': 'energie', 'text': 'méthanisation'},
+            {'categories': 'formation-emploi', 'text': 'agriculteur'},
+            {'text': 'exploitation agricole'},
+            {'text': 'jeune agriculteur'},
+            {'text': 'installation agricole'},
+            {'text': 'PAC'},
+            {'text': 'PCAE'},
+            {'text': 'MAEC'},
+        ]
         
         headers = {
             'User-Agent': 'AgriSubv/2.0 (https://agrisubv.onrender.com)',
@@ -176,61 +196,67 @@ class AidesTerritoiresSync:
         async with aiohttp.ClientSession(headers=headers) as session:
             self.session = session
             
-            while True:
-                if max_pages and page > max_pages:
-                    break
+            for config_idx, search_config in enumerate(search_configs):
+                page = 1
+                config_label = search_config.get('categories', '') or search_config.get('text', '')
+                logger.info(f"\n🔍 Recherche {config_idx + 1}/{len(search_configs)}: {config_label}")
                 
-                # Rate limiting
-                await self._rate_limit()
-                
-                params = {
-                    'categories': 'agriculture',
-                    'is_charged': 'false',
-                    'page_size': self.BATCH_SIZE,
-                    'page': page
-                }
-                
-                try:
-                    logger.info(f"🔄 Récupération page {page}...")
-                    async with session.get(AIDES_TERRITOIRES_API_URL, params=params) as response:
-                        if response.status == 401:
-                            logger.error(f"❌ Token expiré ou invalide (401)")
-                            # Réessayer avec un nouveau token
-                            bearer_token = await self.get_bearer_token()
-                            if not bearer_token:
+                while True:
+                    if max_pages and page > max_pages:
+                        break
+                    
+                    # Rate limiting
+                    await self._rate_limit()
+                    
+                    params = {
+                        'is_charged': 'false',
+                        'page_size': self.BATCH_SIZE,
+                        'page': page
+                    }
+                    params.update(search_config)
+                    
+                    try:
+                        async with session.get(AIDES_TERRITOIRES_API_URL, params=params) as response:
+                            if response.status == 401:
+                                logger.error(f"❌ Token expiré ou invalide (401)")
+                                # Réessayer avec un nouveau token
+                                bearer_token = await self.get_bearer_token()
+                                if not bearer_token:
+                                    break
+                                headers['Authorization'] = f'Bearer {bearer_token}'
+                                continue
+                            
+                            if response.status != 200:
+                                logger.error(f"❌ Erreur HTTP {response.status}")
                                 break
-                            headers['Authorization'] = f'Bearer {bearer_token}'
-                            continue
-                        
-                        if response.status != 200:
-                            logger.error(f"❌ Erreur HTTP {response.status} page {page}")
-                            error_text = await response.text()
-                            logger.error(f"   Détails: {error_text[:200]}")
-                            break
-                        
-                        data = await response.json()
-                        results = data.get('results', [])
-                        
-                        if not results:
-                            logger.info(f"✅ Fin de pagination (page {page})")
-                            break
-                        
-                        all_aides.extend(results)
-                        logger.info(f"   ✅ {len(results)} aides récupérées (Total: {len(all_aides)})")
-                        
-                        if not data.get('next'):
-                            break
-                        
-                        page += 1
-                        
-                except asyncio.TimeoutError:
-                    logger.error(f"❌ Timeout page {page}")
-                    break
-                except Exception as e:
-                    logger.error(f"❌ Erreur page {page}: {e}")
-                    break
+                            
+                            data = await response.json()
+                            results = data.get('results', [])
+                            
+                            if not results:
+                                break
+                            
+                            # Filtrer les doublons
+                            new_aides = 0
+                            for aide in results:
+                                aide_id = aide.get('id')
+                                if aide_id and aide_id not in seen_ids:
+                                    seen_ids.add(aide_id)
+                                    all_aides.append(aide)
+                                    new_aides += 1
+                            
+                            logger.info(f"   Page {page}: {new_aides} nouvelles aides (Total: {len(all_aides)})")
+                            
+                            if not data.get('next'):
+                                break
+                            
+                            page += 1
+                            
+                    except Exception as e:
+                        logger.error(f"❌ Erreur: {e}")
+                        break
         
-        logger.info(f"✅ Total récupéré: {len(all_aides)} aides")
+        logger.info(f"✅ Total récupéré: {len(all_aides)} aides uniques")
         return all_aides
     
     def detect_productions(self, aide_data: Dict[str, Any]) -> List[TypeProduction]:
