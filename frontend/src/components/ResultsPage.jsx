@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 
 export default function ResultsPage({ results, profil, onRestart }) {
   const [expandedAide, setExpandedAide] = useState(null);
@@ -241,7 +242,7 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
               <h4 className="font-semibold text-gray-900 mb-2">✅ Conditions d'éligibilité</h4>
               <div 
                 className="text-gray-600 text-sm prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: aide.conditions_eligibilite }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(aide.conditions_eligibilite) }}
               />
             </div>
           )}

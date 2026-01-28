@@ -480,7 +480,6 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
         engine = MatchingEngine()
         
         # Calculer le matching pour chaque aide
-        # Calculer le matching pour chaque aide
         resultats = []
         for aide_data in aides:
             try:
@@ -499,7 +498,7 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                     'source': aide.source,
                     'source_url': aide.source_url,
                     'lien_officiel': aide.lien_officiel,
-                    'lien_dossier': aide.lien_dossier if hasattr(aide, 'lien_dossier') else None,
+                    'lien_dossier': aide.lien_dossier,
                     
                     # Dates
                     'date_debut': aide.date_debut,
@@ -530,7 +529,7 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                     # Conditions et démarches
                     'conditions_eligibilite': aide.conditions_eligibilite if aide.conditions_eligibilite else '',
                     'demarche': aide.demarche if aide.demarche else '',
-                    'contact': aide.contact if hasattr(aide, 'contact') else None,
+                    'contact': aide.contact,
                     
                     # Tags
                     'tags': aide.tags[:15] if aide.tags else [],
@@ -752,8 +751,9 @@ async def get_aides_stats():
             {"$group": {"_id": "$source", "count": {"$sum": 1}}}
         ]).to_list(length=100)
         
-        # Stats par région
+        # Stats par région (with error handling for missing regions)
         by_region = await db.aides_v2.aggregate([
+            {"$match": {"criteres.regions": {"$exists": True, "$ne": []}}},
             {"$unwind": "$criteres.regions"},
             {"$group": {"_id": "$criteres.regions", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
@@ -770,7 +770,7 @@ async def get_aides_stats():
         }
     except Exception as e:
         logger.error(f"Erreur stats: {e}")
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des statistiques: {str(e)}")
 
 # ============ SYNC ENDPOINTS ============
 
