@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
@@ -54,13 +54,30 @@ function QuestionnairePage() {
 }
 
 // Page résultats
-function ResultatsPage() {
+function ResultsRoute() {
   const navigate = useNavigate();
-  const results = JSON.parse(sessionStorage.getItem('matching_results') || 'null');
-  const profil = JSON.parse(sessionStorage.getItem('user_profil') || 'null');
+  
+  let results = null;
+  let profil = null;
+  
+  try {
+    const resultsStr = sessionStorage.getItem('matching_results');
+    const profilStr = sessionStorage.getItem('user_profil');
+    results = resultsStr ? JSON.parse(resultsStr) : null;
+    profil = profilStr ? JSON.parse(profilStr) : null;
+  } catch (error) {
+    console.error('Error parsing sessionStorage data:', error);
+    results = null;
+    profil = null;
+  }
+
+  useEffect(() => {
+    if (!results) {
+      navigate('/questionnaire');
+    }
+  }, [results, navigate]);
 
   if (!results) {
-    navigate('/questionnaire');
     return null;
   }
 
@@ -69,7 +86,8 @@ function ResultatsPage() {
       results={results} 
       profil={profil}
       onRestart={() => {
-        sessionStorage.clear();
+        sessionStorage.removeItem('matching_results');
+        sessionStorage.removeItem('user_profil');
         navigate('/questionnaire');
       }}
     />
@@ -86,7 +104,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/questionnaire" element={<QuestionnairePage />} />
-            <Route path="/resultats" element={<ResultatsPage />} />
+            <Route path="/resultats" element={<ResultsRoute />} />
           </Routes>
         </main>
         <Footer />

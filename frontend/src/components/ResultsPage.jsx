@@ -103,7 +103,7 @@ function AideCard({ resultat, type }) {
         </p>
       )}
       
-      {aide.tags && aide.tags.length > 0 && (
+      {aide.tags?.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {aide.tags.slice(0, 5).map((tag, i) => (
             <span key={i} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
