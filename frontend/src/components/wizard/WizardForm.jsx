@@ -1,3 +1,8 @@
+/**
+ * @deprecated This component is deprecated and should not be used in new code.
+ * Please use DynamicQuestionnaire instead for the unified questionnaire flow.
+ * This file is kept for reference only.
+ */
 import React, { useState } from 'react';
 import { ProgressBar } from './ProgressBar';
 import { Step1Localisation } from './steps/Step1Localisation';

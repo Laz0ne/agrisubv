@@ -492,11 +492,13 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                 resultat_dict['aide'] = {
                     'aid_id': aide.aid_id,
                     'titre': aide.titre,
-                    'description': aide.description,
-                    'url': aide.source_url or aide.lien_officiel,
-                    'type_aide': aide.tags[:3] if aide.tags else [],
+                    'description': aide.description[:500] if aide.description else '',
                     'organisme': aide.organisme,
-                    'source': aide.source
+                    'programme': aide.programme,
+                    'source_url': aide.source_url,
+                    'lien_officiel': aide.lien_officiel,
+                    'date_limite_depot': aide.date_limite_depot,
+                    'tags': aide.tags[:10] if aide.tags else [],
                 }
                 
                 resultats.append(resultat_dict)
@@ -506,23 +508,23 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                 continue
         
         # Trier par score décroissant
-        resultats.sort(key=lambda x: (-x.eligible, -x.score))
+        resultats.sort(key=lambda x: (-x['eligible'], -x['score']))
         
         # Statistiques globales
-        aides_eligibles = [r for r in resultats if r.eligible]
-        aides_quasi_eligibles = [r for r in resultats if not r.eligible and r.score >= 40]
-        aides_non_eligibles = [r for r in resultats if r.score < 40]
+        aides_eligibles = [r for r in resultats if r['eligible']]
+        aides_quasi_eligibles = [r for r in resultats if not r['eligible'] and r['score'] >= 40]
+        aides_non_eligibles = [r for r in resultats if r['score'] < 40]
         
         # Calcul du montant total estimé
         montant_total_min = sum(
-            r.montant_estime_min or 0 
+            r['montant_estime_min'] or 0 
             for r in aides_eligibles 
-            if r.montant_estime_min
+            if r.get('montant_estime_min')
         )
         montant_total_max = sum(
-            r.montant_estime_max or 0 
+            r['montant_estime_max'] or 0 
             for r in aides_eligibles 
-            if r.montant_estime_max
+            if r.get('montant_estime_max')
         )
         
         logger.info(f"   ✅ Matching terminé:")
