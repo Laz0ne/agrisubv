@@ -1,3 +1,8 @@
+/**
+ * @deprecated This component is deprecated and should not be used in new code.
+ * Please use ResultsPage instead for displaying matching results.
+ * This file is kept for reference only.
+ */
 import React, { useState } from 'react';
 import './ResultsSection.css';
 
