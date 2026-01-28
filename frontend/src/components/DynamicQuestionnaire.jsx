@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import QuestionSelect from './QuestionSelect';
 import QuestionMultiSelect from './QuestionMultiSelect';
 import QuestionNumber from './QuestionNumber';
@@ -309,8 +309,43 @@ export default function DynamicQuestionnaire({ onComplete }) {
     section.questions.forEach(question => {
       if (!isQuestionVisible(question)) return;
       const answer = answers[question.id];
+      
+      // Check if required
       if (question.required && (answer === undefined || answer === null || answer === '' || (Array.isArray(answer) && answer.length === 0))) {
         newErrors[question.id] = 'Ce champ est requis';
+        return;
+      }
+      
+      // Validation specific to type
+      if (answer !== undefined && answer !== null && answer !== '') {
+        // Number validation
+        if (question.type === 'number' && question.validation) {
+          const numValue = parseFloat(answer);
+          if (question.validation.min !== undefined && numValue < question.validation.min) {
+            newErrors[question.id] = `La valeur doit être supérieure ou égale à ${question.validation.min}`;
+          }
+          if (question.validation.max !== undefined && numValue > question.validation.max) {
+            newErrors[question.id] = `La valeur doit être inférieure ou égale à ${question.validation.max}`;
+          }
+        }
+        
+        // Text validation (regex)
+        if (question.type === 'text' && question.validation?.pattern) {
+          const regex = new RegExp(question.validation.pattern);
+          if (!regex.test(answer)) {
+            newErrors[question.id] = question.validation.error_message || 'Format invalide';
+          }
+        }
+        
+        // Multiselect validation
+        if (question.type === 'multiselect' && Array.isArray(answer)) {
+          if (question.min_selections && answer.length < question.min_selections) {
+            newErrors[question.id] = `Sélectionnez au moins ${question.min_selections} option(s)`;
+          }
+          if (question.max_selections && answer.length > question.max_selections) {
+            newErrors[question.id] = `Sélectionnez au maximum ${question.max_selections} option(s)`;
+          }
+        }
       }
     });
     setErrors(newErrors);
@@ -354,7 +389,10 @@ export default function DynamicQuestionnaire({ onComplete }) {
       if (answers.label_bio === 'certifie' || answers.label_bio === 'conversion') {
         profil.label_bio = true;
         if (!profil.labels) profil.labels = [];
-        profil.labels.push('Agriculture Biologique');
+        // Avoid duplicates
+        if (!profil.labels.includes('Agriculture Biologique')) {
+          profil.labels.push('Agriculture Biologique');
+        }
       } else {
         profil.label_bio = false;
       }
