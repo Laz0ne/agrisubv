@@ -497,7 +497,7 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                     'programme': aide.programme,
                     'source_url': aide.source_url,
                     'lien_officiel': aide.lien_officiel,
-                    'date_limite_depot': aide.date_limite_depot.isoformat() if aide.date_limite_depot else None,
+                    'date_limite_depot': aide.date_limite_depot,
                     'tags': aide.tags[:10] if aide.tags else [],
                 }
                 
