@@ -480,7 +480,6 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
         engine = MatchingEngine()
         
         # Calculer le matching pour chaque aide
-                # Calculer le matching pour chaque aide
         resultats = []
         for aide_data in aides:
             try:
@@ -492,13 +491,51 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                 resultat_dict['aide'] = {
                     'aid_id': aide.aid_id,
                     'titre': aide.titre,
-                    'description': aide.description[:500] if aide.description else '',
+                    'description': aide.description if aide.description else '',
+                    'description_courte': aide.description[:200] + '...' if aide.description and len(aide.description) > 200 else aide.description,
                     'organisme': aide.organisme,
                     'programme': aide.programme,
+                    'source': aide.source,
                     'source_url': aide.source_url,
                     'lien_officiel': aide.lien_officiel,
+                    'lien_dossier': aide.lien_dossier,
+                    
+                    # Dates
+                    'date_debut': aide.date_debut,
+                    'date_fin': aide.date_fin,
                     'date_limite_depot': aide.date_limite_depot,
-                    'tags': aide.tags[:10] if aide.tags else [],
+                    
+                    # Montant détaillé
+                    'montant': {
+                        'type': aide.montant.type_montant.value if aide.montant else None,
+                        'min': aide.montant.montant_min if aide.montant else None,
+                        'max': aide.montant.montant_max if aide.montant else None,
+                        'taux_min': aide.montant.taux_min if aide.montant else None,
+                        'taux_max': aide.montant.taux_max if aide.montant else None,
+                        'plafond': aide.montant.plafond if aide.montant else None,
+                        'description': aide.montant.description if aide.montant else None,
+                    },
+                    
+                    # Critères
+                    'criteres': {
+                        'regions': aide.criteres.regions if aide.criteres else [],
+                        'departements': aide.criteres.departements if aide.criteres else [],
+                        'types_production': [p.value for p in aide.criteres.types_production] if aide.criteres else [],
+                        'types_projets': [p.value for p in aide.criteres.types_projets] if aide.criteres else [],
+                        'labels_requis': aide.criteres.labels_requis if aide.criteres else [],
+                        'jeune_agriculteur': aide.criteres.jeune_agriculteur if aide.criteres else None,
+                    },
+                    
+                    # Conditions et démarches
+                    'conditions_eligibilite': aide.conditions_eligibilite if aide.conditions_eligibilite else '',
+                    'demarche': aide.demarche if aide.demarche else '',
+                    'contact': aide.contact,
+                    
+                    # Tags
+                    'tags': aide.tags[:15] if aide.tags else [],
+                    
+                    # Statut
+                    'statut': aide.statut,
                 }
                 
                 resultats.append(resultat_dict)
@@ -700,6 +737,40 @@ async def get_stats():
         "total_aides": total_aides,
         "aides_actives": aides_actives
     }
+
+@api_router.get("/stats/aides")
+async def get_aides_stats():
+    """Retourne les statistiques sur les aides"""
+    try:
+        total = await db.aides_v2.count_documents({})
+        active = await db.aides_v2.count_documents({"statut": "active"})
+        expiree = await db.aides_v2.count_documents({"statut": "expiree"})
+        
+        # Stats par source
+        by_source = await db.aides_v2.aggregate([
+            {"$group": {"_id": "$source", "count": {"$sum": 1}}}
+        ]).to_list(length=100)
+        
+        # Stats par région (with error handling for missing regions)
+        by_region = await db.aides_v2.aggregate([
+            {"$match": {"criteres.regions": {"$exists": True, "$ne": []}}},
+            {"$unwind": "$criteres.regions"},
+            {"$group": {"_id": "$criteres.regions", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 20}
+        ]).to_list(length=20)
+        
+        return {
+            "total_aides": total,
+            "aides_actives": active,
+            "aides_expirees": expiree,
+            "par_source": {item["_id"]: item["count"] for item in by_source},
+            "par_region": {item["_id"]: item["count"] for item in by_region},
+            "message": f"✅ {active} aides actives sur {total} au total"
+        }
+    except Exception as e:
+        logger.error(f"Erreur stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des statistiques: {str(e)}")
 
 # ============ SYNC ENDPOINTS ============
 
