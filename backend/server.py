@@ -492,11 +492,13 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                 resultat_dict['aide'] = {
                     'aid_id': aide.aid_id,
                     'titre': aide.titre,
-                    'description': aide.description,
-                    'url': aide.source_url or aide.lien_officiel,
-                    'type_aide': aide.tags[:3] if aide.tags else [],
+                    'description': aide.description[:500] if aide.description else '',
                     'organisme': aide.organisme,
-                    'source': aide.source
+                    'programme': aide.programme,
+                    'source_url': aide.source_url,
+                    'lien_officiel': aide.lien_officiel,
+                    'date_limite_depot': aide.date_limite_depot.isoformat() if aide.date_limite_depot else None,
+                    'tags': aide.tags[:10] if aide.tags else [],
                 }
                 
                 resultats.append(resultat_dict)
