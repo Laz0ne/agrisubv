@@ -567,16 +567,21 @@ class MatchingEngine:
         aide: AideAgricoleV2, 
         profil: ProfilAgriculteur
     ) -> Tuple[float, List[DetailCritere]]:
-        """Évalue les labels (non bloquant, bonus)"""
+        """Évalue les labels (avec détail des labels manquants)"""
         details = []
         score = 0.0
         
         labels_requis = aide.criteres.labels_requis
         labels_bonus = aide.criteres.labels_bonus
         
-        # Labels requis (bloquant si définis)
+        # Labels requis
         if labels_requis:
-            labels_ok = all(label in profil.labels for label in labels_requis)
+            labels_profil = [l.lower() for l in profil.labels]
+            labels_ok = all(
+                any(req.lower() in lp or lp in req.lower() for lp in labels_profil)
+                for req in labels_requis
+            )
+            
             if labels_ok:
                 details.append(DetailCritere(
                     nom="Labels requis",
@@ -588,22 +593,38 @@ class MatchingEngine:
                 ))
                 score += self.POIDS_LABELS * 0.6
             else:
-                labels_manquants = [l for l in labels_requis if l not in profil.labels]
+                # ⚠️ DÉTAILLER les labels manquants
+                labels_manquants = [
+                    req for req in labels_requis 
+                    if not any(req.lower() in lp or lp in req.lower() for lp in labels_profil)
+                ]
                 details.append(DetailCritere(
                     nom="Labels requis",
                     valide=False,
                     bloquant=False,
                     points=0.0,
                     points_max=self.POIDS_LABELS * 0.6,
-                    explication=f"❌ Labels manquants: {', '.join(labels_manquants)}"
+                    explication=f"❌ Label(s) manquant(s): {', '.join(labels_manquants)}. Cette aide nécessite: {', '.join(labels_requis)}"
                 ))
         else:
             # Pas de labels requis, points automatiques
+            details.append(DetailCritere(
+                nom="Labels requis",
+                valide=True,
+                bloquant=False,
+                points=self.POIDS_LABELS * 0.6,
+                points_max=self.POIDS_LABELS * 0.6,
+                explication="✅ Aucun label spécifique requis"
+            ))
             score += self.POIDS_LABELS * 0.6
         
         # Labels bonus
         if labels_bonus:
-            labels_bonus_profil = [l for l in profil.labels if l in labels_bonus]
+            labels_profil = [l.lower() for l in profil.labels]
+            labels_bonus_profil = [
+                lb for lb in labels_bonus 
+                if any(lb.lower() in lp or lp in lb.lower() for lp in labels_profil)
+            ]
             if labels_bonus_profil:
                 ratio = len(labels_bonus_profil) / len(labels_bonus)
                 points = self.POIDS_LABELS * 0.4 * ratio
@@ -616,6 +637,15 @@ class MatchingEngine:
                     explication=f"✅ Labels bonus: {', '.join(labels_bonus_profil)}"
                 ))
                 score += points
+            else:
+                details.append(DetailCritere(
+                    nom="Labels bonus",
+                    valide=False,
+                    bloquant=False,
+                    points=0.0,
+                    points_max=self.POIDS_LABELS * 0.4,
+                    explication=f"💡 Labels bonus possibles: {', '.join(labels_bonus)}"
+                ))
         else:
             # Pas de labels bonus, points automatiques
             score += self.POIDS_LABELS * 0.4
