@@ -4,10 +4,12 @@ export default function ScoreIndicator({ score, size = 60, eligible }) {
   const offset = circumference - (score / 100) * circumference;
   
   const color = eligible ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
+  const scoreValue = Math.round(score);
+  const ariaLabel = `Score d'éligibilité: ${scoreValue} sur 100${eligible ? ', éligible' : score >= 40 ? ', presque éligible' : ', non éligible'}`;
   
   return (
-    <div className="score-ring" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
+    <div className="score-ring" style={{ width: size, height: size }} aria-label={ariaLabel} role="img">
+      <svg width={size} height={size} aria-hidden="true">
         <circle
           className="score-ring-bg"
           cx={size / 2}
@@ -22,11 +24,10 @@ export default function ScoreIndicator({ score, size = 60, eligible }) {
           stroke={color}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 1s ease-out' }}
         />
       </svg>
-      <div className="score-ring-text" style={{ color }}>
-        {Math.round(score)}
+      <div className="score-ring-text" style={{ color }} aria-hidden="true">
+        {scoreValue}
       </div>
     </div>
   );

@@ -184,7 +184,7 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
               size={70}
               eligible={isEligible}
             />
-            <span className="text-gray-400 text-2xl transform transition-transform" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <span className={`text-gray-400 text-2xl transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
               ▼
             </span>
           </div>

@@ -207,7 +207,6 @@ body {
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(22, 163, 74, 0.5);
-  animation: gradient-shift 3s ease infinite;
 }
 
 .btn-primary:active {
@@ -321,6 +320,12 @@ body {
 .select-card:hover {
   border-color: #d1d5db;
   background: #f9fafb;
+}
+
+.select-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
 }
 
 .select-card.selected {
@@ -560,10 +565,9 @@ body {
   background: linear-gradient(180deg, #9ca3af, #6b7280);
 }
 
-/* ============ FOCUS STATES ============ */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+/* ============ UTILITIES ============ */
+.rotate-180 {
+  transform: rotate(180deg);
 }
 
 /* ============ RESPONSIVE ============ */
