@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DOMPurify from 'dompurify';
+import ScoreIndicator from './ScoreIndicator';
 
 export default function ResultsPage({ results, profil, onRestart }) {
   const [expandedAide, setExpandedAide] = useState(null);
@@ -156,60 +157,65 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
   };
 
   return (
-    <div className={`bg-white border-l-4 ${borderColor} rounded-lg shadow-md overflow-hidden transition-all duration-300`}>
+    <div className={`card ${isEligible ? 'card-eligible' : 'card-quasi'} card-interactive animate-fade-in`}>
       {/* En-tête cliquable */}
       <div 
-        className="p-6 cursor-pointer hover:bg-gray-50"
+        className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={onToggle}
       >
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
               {aide.titre || `Aide ${resultat.aide_id}`}
             </h3>
             {aide.organisme && (
-              <p className="text-sm text-gray-500 flex items-center">
-                🏛️ {aide.organisme}
-                {aide.programme && <span className="ml-2 text-gray-400">• {aide.programme}</span>}
+              <p className="text-sm text-gray-500 flex items-center gap-2">
+                <span>🏛️</span>
+                <span>{aide.organisme}</span>
+                {aide.programme && <span className="text-gray-400">• {aide.programme}</span>}
               </p>
             )}
           </div>
+          
+          {/* Score Indicator */}
           <div className="flex flex-col items-end gap-2">
-            <span className={`${badgeColor} px-3 py-1 rounded-full text-sm font-medium`}>
-              {isEligible ? '✅' : '⚠️'} {Math.round(resultat.score || 0)}/100
-            </span>
-            <span className="text-gray-400 text-xl">
-              {isExpanded ? '▲' : '▼'}
+            <ScoreIndicator 
+              score={resultat.score || 0}
+              size={70}
+              eligible={isEligible}
+            />
+            <span className="text-gray-400 text-2xl transform transition-transform" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              ▼
             </span>
           </div>
         </div>
         
         {/* Résumé rapide */}
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-4">
           {/* Date limite */}
           {aide.date_limite_depot && (
-            <span className="bg-red-50 text-red-700 px-2 py-1 rounded text-xs font-medium">
+            <span className="badge badge-danger">
               📅 Limite: {formatDate(aide.date_limite_depot)}
             </span>
           )}
           
           {/* Montant */}
           {formatMontant() && (
-            <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium">
+            <span className="badge badge-success">
               💰 {formatMontant()}
             </span>
           )}
           
           {/* Type d'aide */}
           {aide.montant?.type && (
-            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+            <span className="badge badge-info">
               {aide.montant.type}
             </span>
           )}
           
           {/* Tags */}
           {aide.tags?.slice(0, 3).map((tag, i) => (
-            <span key={i} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+            <span key={i} className="badge badge-neutral">
               {tag}
             </span>
           ))}
@@ -217,20 +223,31 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
 
         {/* Critères bloquants si non éligible */}
         {!isEligible && resultat.criteres_bloquants_ko?.length > 0 && (
-          <p className="text-orange-600 text-sm mt-3 bg-orange-50 p-2 rounded">
-            ⚠️ Critères non remplis : {resultat.criteres_bloquants_ko.join(', ')}
-          </p>
+          <div className="mt-4 p-3 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl">
+            <p className="text-orange-800 text-sm font-medium flex items-start gap-2">
+              <span className="text-lg">⚠️</span>
+              <span>
+                <strong>Critères non remplis:</strong>
+                <span className="block mt-1">
+                  {resultat.criteres_bloquants_ko.join(', ')}
+                </span>
+              </span>
+            </p>
+          </div>
         )}
       </div>
 
       {/* Détails expandables */}
       {isExpanded && (
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
+        <div className="border-t border-gray-200 p-6 bg-gradient-to-br from-gray-50 to-white animate-fade-in">
           {/* Description */}
           {aide.description && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">📝 Description</h4>
-              <p className="text-gray-600 text-sm whitespace-pre-line">
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">📝</span>
+                <span>Description</span>
+              </h4>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                 {aide.description}
               </p>
             </div>
@@ -238,10 +255,13 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
           
           {/* Conditions d'éligibilité */}
           {aide.conditions_eligibilite && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">✅ Conditions d'éligibilité</h4>
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">✅</span>
+                <span>Conditions d'éligibilité</span>
+              </h4>
               <div 
-                className="text-gray-600 text-sm prose prose-sm max-w-none"
+                className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(aide.conditions_eligibilite) }}
               />
             </div>
@@ -249,23 +269,40 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
           
           {/* Critères détectés */}
           {aide.criteres && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">🎯 Critères détectés</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">🎯</span>
+                <span>Critères détectés</span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 {aide.criteres.regions?.length > 0 && (
-                  <div><span className="font-medium">Régions:</span> {aide.criteres.regions.join(', ')}</div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="font-semibold text-gray-900">Régions:</span>
+                    <span className="ml-2 text-gray-600">{aide.criteres.regions.join(', ')}</span>
+                  </div>
                 )}
                 {aide.criteres.types_production?.length > 0 && (
-                  <div><span className="font-medium">Productions:</span> {aide.criteres.types_production.join(', ')}</div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="font-semibold text-gray-900">Productions:</span>
+                    <span className="ml-2 text-gray-600">{aide.criteres.types_production.join(', ')}</span>
+                  </div>
                 )}
                 {aide.criteres.types_projets?.length > 0 && (
-                  <div><span className="font-medium">Projets:</span> {aide.criteres.types_projets.join(', ')}</div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="font-semibold text-gray-900">Projets:</span>
+                    <span className="ml-2 text-gray-600">{aide.criteres.types_projets.join(', ')}</span>
+                  </div>
                 )}
                 {aide.criteres.labels_requis?.length > 0 && (
-                  <div><span className="font-medium">Labels requis:</span> {aide.criteres.labels_requis.join(', ')}</div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="font-semibold text-gray-900">Labels requis:</span>
+                    <span className="ml-2 text-gray-600">{aide.criteres.labels_requis.join(', ')}</span>
+                  </div>
                 )}
                 {aide.criteres.jeune_agriculteur && (
-                  <div><span className="font-medium">👨‍🌾 Réservé aux Jeunes Agriculteurs</span></div>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <span className="font-semibold text-blue-900">👨‍🌾 Réservé aux Jeunes Agriculteurs</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -273,23 +310,37 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
           
           {/* Démarches */}
           {aide.demarche && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">📋 Démarches</h4>
-              <p className="text-gray-600 text-sm">{aide.demarche}</p>
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">📋</span>
+                <span>Démarches</span>
+              </h4>
+              <p className="text-gray-700 leading-relaxed">{aide.demarche}</p>
             </div>
           )}
           
           {/* Détails du score */}
           {resultat.details_criteres?.length > 0 && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">📊 Détail du score</h4>
-              <div className="space-y-1">
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">📊</span>
+                <span>Détail du score</span>
+              </h4>
+              <div className="space-y-2">
                 {resultat.details_criteres.map((critere, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className={critere.valide ? 'text-green-600' : 'text-red-600'}>
-                      {critere.valide ? '✓' : '✗'} {critere.nom}
+                  <div 
+                    key={i} 
+                    className={`flex justify-between items-center p-3 rounded-lg ${
+                      critere.valide 
+                        ? 'bg-green-50 border border-green-200' 
+                        : 'bg-red-50 border border-red-200'
+                    }`}
+                  >
+                    <span className={`font-medium ${critere.valide ? 'text-green-700' : 'text-red-700'}`}>
+                      <span className="text-lg mr-2">{critere.valide ? '✓' : '✗'}</span>
+                      {critere.nom}
                     </span>
-                    <span className="text-gray-500">
+                    <span className={`font-semibold ${critere.valide ? 'text-green-600' : 'text-red-600'}`}>
                       {critere.points}/{critere.points_max} pts
                     </span>
                   </div>
@@ -299,15 +350,16 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
           )}
           
           {/* Liens */}
-          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
             {(aide.lien_officiel || aide.source_url) && (
               <a
                 href={aide.lien_officiel || aide.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="btn btn-primary"
               >
-                🔗 Voir l'aide officielle
+                <span className="mr-2">🔗</span>
+                Voir l'aide officielle
               </a>
             )}
             {aide.lien_dossier && (
@@ -315,9 +367,10 @@ function AideFlashcard({ resultat, isExpanded, onToggle }) {
                 href={aide.lien_dossier}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="btn btn-secondary"
               >
-                📄 Déposer un dossier
+                <span className="mr-2">📄</span>
+                Déposer un dossier
               </a>
             )}
           </div>
