@@ -460,26 +460,38 @@ export default function DynamicQuestionnaire({ onComplete }) {
       {/* Header avec progression */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-3">
-          <h1 className="text-2xl font-bold text-gray-900">
-            🌾 Trouvez vos aides
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-green-600">
+              <line x1="14" y1="26" x2="14" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <ellipse cx="14" cy="5" rx="3" ry="4.5" fill="currentColor" opacity="0.9"/>
+              <ellipse cx="11" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.85" transform="rotate(-20 11 10)"/>
+              <ellipse cx="10" cy="16" rx="2.5" ry="3.5" fill="currentColor" opacity="0.75" transform="rotate(-25 10 16)"/>
+              <ellipse cx="17" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.85" transform="rotate(20 17 10)"/>
+              <ellipse cx="18" cy="16" rx="2.5" ry="3.5" fill="currentColor" opacity="0.75" transform="rotate(25 18 16)"/>
+            </svg>
+            Trouvez vos aides
           </h1>
-          <span className="badge badge-info">
+          <span className="badge badge-info" aria-label={`Étape ${currentSectionIndex + 1} sur ${config.sections.length}`}>
             {currentSectionIndex + 1} / {config.sections.length}
           </span>
         </div>
-        
-        <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+
+        {/* Shimmer progress bar */}
+        <div className="progress-container" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progression du questionnaire">
+          <div className="progress-bar" style={{ width: `${progress}%` }}></div>
         </div>
-        
-        <p className="mt-2 text-sm text-gray-500">
-          ⏱️ Environ {config.metadata?.estimated_time_minutes || 5} minutes
+
+        <p className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Environ {config.metadata?.estimated_time_minutes || 5} minutes
         </p>
       </div>
 
       {/* Section courante */}
-      <div className="card p-6 mb-6 animate-slide-in" key={currentSection.id}>
-        <div className="mb-6">
+      <div className="card p-6 mb-6 animate-fade-in" key={currentSection.id}>
+        <div className="mb-6 pb-5 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             {currentSection.titre}
             {currentSection.importance === 'CRITIQUE' && (
@@ -487,7 +499,7 @@ export default function DynamicQuestionnaire({ onComplete }) {
             )}
           </h2>
           {currentSection.description && (
-            <p className="mt-1 text-gray-600">{currentSection.description}</p>
+            <p className="mt-1 text-sm text-gray-500">{currentSection.description}</p>
           )}
         </div>
 
@@ -501,40 +513,63 @@ export default function DynamicQuestionnaire({ onComplete }) {
         <button
           onClick={handlePrevious}
           disabled={currentSectionIndex === 0}
-          className={`btn ${currentSectionIndex === 0 ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'btn-secondary'}`}
+          aria-disabled={currentSectionIndex === 0}
+          className={`btn flex items-center gap-2 ${
+            currentSectionIndex === 0
+              ? 'opacity-40 cursor-not-allowed bg-gray-100 text-gray-400'
+              : 'btn-secondary'
+          }`}
         >
-          ← Précédent
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Précédent
         </button>
 
         <button
           onClick={handleNext}
           disabled={submitting}
-          className="btn btn-primary"
+          aria-disabled={submitting}
+          className="btn btn-primary flex items-center gap-2"
         >
           {submitting ? (
             <>
-              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Calcul...
+              Calcul en cours…
             </>
           ) : currentSectionIndex === config.sections.length - 1 ? (
-            'Voir mes aides 🚀'
+            <>
+              Voir mes aides
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </>
           ) : (
-            'Suivant →'
+            <>
+              Suivant
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </>
           )}
         </button>
       </div>
 
       {/* Erreurs */}
       {Object.keys(errors).length > 0 && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg animate-fade-in">
-          <p className="text-red-800 font-medium">
-            ⚠️ Veuillez corriger les erreurs avant de continuer.
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl animate-fade-in" role="alert">
+          <p className="text-red-800 font-medium flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Veuillez corriger les erreurs avant de continuer.
           </p>
         </div>
       )}
     </div>
   );
 }
+
