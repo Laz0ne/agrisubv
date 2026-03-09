@@ -1,10 +1,22 @@
-/* Animations CSS - AgriSubv V2 */
+/* Animations CSS - AgriSubv V2 — Source unique des @keyframes */
 
-/* Keyframes */
+/* ============ KEYFRAMES ============ */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -61,6 +73,12 @@
   }
 }
 
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
 @keyframes progressFill {
   from {
     width: 0%;
@@ -93,7 +111,27 @@
   }
 }
 
-/* Utility Classes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bandSlide {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes drawCircle {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ============ UTILITY CLASSES ============ */
+
 .animate-fadeIn {
   animation: fadeIn 0.5s ease;
 }
@@ -126,7 +164,8 @@
   animation: scaleIn 0.3s ease;
 }
 
-/* Hover Effects */
+/* ============ HOVER EFFECTS ============ */
+
 .hover-scale {
   transition: transform var(--transition-base);
 }
@@ -150,4 +189,16 @@
 
 .hover-glow:hover {
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+/* ============ PREFERS-REDUCED-MOTION ============ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

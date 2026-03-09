@@ -1,27 +1,36 @@
 /* Design System - AgriSubv V2 - Thème Agricole Moderne */
 
 :root {
-  /* Couleurs principales - Naturelles */
+  /* =============================================
+     PALETTE PRINCIPALE — SOURCE UNIQUE DE VÉRITÉ
+     ============================================= */
+
+  /* Verts principaux (Emerald) */
   --primary-green: #10b981;
   --primary-green-dark: #059669;
   --primary-green-light: #34d399;
-  
+
+  /* Alias utilisés dans les composants */
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-primary-light: #34d399;
+
   --secondary-green: #84cc16; /* Vert pomme/chartreuse */
-  --earth-brown: #92400e; /* Terre */
-  --wheat-gold: #f59e0b; /* Blé doré */
-  
+  --earth-brown: #92400e;     /* Terre */
+  --wheat-gold: #f59e0b;      /* Blé doré */
+
   --accent-blue: #3b82f6;
   --accent-purple: #8b5cf6;
-  
+
   /* Tons naturels */
   --beige-50: #fefce8;
   --beige-100: #fef9c3;
   --beige-200: #fef08a;
-  
+
   --earth-50: #fef3c7;
   --earth-100: #fde68a;
   --earth-200: #fcd34d;
-  
+
   /* Gris naturels (chauds) */
   --gray-50: #fafaf9;
   --gray-100: #f5f5f4;
@@ -33,32 +42,37 @@
   --gray-700: #44403c;
   --gray-800: #292524;
   --gray-900: #1c1917;
-  
+
   /* Backgrounds */
   --bg-light: #fafaf9;
   --bg-cream: #fffbeb;
   --bg-warm: #fef3c7;
-  --bg-gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  --bg-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
   --bg-gradient-warm: linear-gradient(135deg, #84cc16 0%, #f59e0b 100%);
   --bg-gradient-earth: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  
+  --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+
   /* Textures et patterns (via background-image) */
   --pattern-dots: radial-gradient(circle, #d6d3d1 1px, transparent 1px);
   --pattern-grid: linear-gradient(90deg, #e7e5e4 1px, transparent 1px),
                   linear-gradient(0deg, #e7e5e4 1px, transparent 1px);
-  
+
   /* Glass effect */
   --glass-bg: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  
-  /* Shadows - Plus prononcées */
+
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.12);
   --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
-  
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-medium: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 30px -5px rgba(0, 0, 0, 0.04);
+  --shadow-strong: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-glow-green: 0 0 40px rgba(16, 185, 129, 0.3);
+
   /* Border radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -66,7 +80,7 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
-  
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -76,10 +90,10 @@
   --spacing-2xl: 3rem;
   --spacing-3xl: 4rem;
   --spacing-4xl: 6rem;
-  
+
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -89,7 +103,7 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
   --text-5xl: 3rem;
-  
+
   /* Transitions */
   --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: all 0.15s ease;
