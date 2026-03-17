@@ -710,8 +710,70 @@ async def analyze_criteria():
 @api_router.api_route("/questionnaire/config", methods=["GET", "HEAD"])
 async def get_questionnaire():
     """Retourne la configuration du questionnaire dynamique"""
-    return await get_questionnaire_config()
-    
+    return await get_questionnaire_config(db)
+
+
+# ============ NOUVEAUX ENDPOINTS QUESTIONNAIRE ADAPTATIF ============
+
+from questionnaire_engine import QuestionnaireEngine as _QuestionnaireEngine
+_qengine = _QuestionnaireEngine()
+
+@api_router.post("/questionnaire/start")
+async def start_questionnaire():
+    """Démarre une nouvelle session de questionnaire adaptatif."""
+    try:
+        state = await _qengine.start_session(db)
+        return {"status": "success", "state": state.model_dump()}
+    except Exception as e:
+        logger.error(f"❌ Erreur démarrage questionnaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/questionnaire/next")
+async def get_next_question(data: dict):
+    """Retourne la prochaine question la plus discriminante."""
+    try:
+        from questionnaire_engine import QuestionnaireState
+        state = QuestionnaireState(**data.get("state", data))
+        question = await _qengine.get_next_question(db, state)
+        return {"status": "success", "question": question}
+    except Exception as e:
+        logger.error(f"❌ Erreur récupération question: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/questionnaire/answer")
+async def submit_answer(data: dict):
+    """Enregistre une réponse et retourne l'état mis à jour."""
+    try:
+        from questionnaire_engine import QuestionnaireState
+        state = QuestionnaireState(**data.get("state", {}))
+        criterion_id = data.get("criterion_id")
+        value = data.get("value")
+        if not criterion_id:
+            raise HTTPException(status_code=400, detail="criterion_id requis")
+        new_state = await _qengine.submit_answer(db, state, criterion_id, value)
+        return {"status": "success", "state": new_state.model_dump()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erreur soumission réponse: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/questionnaire/results")
+async def get_questionnaire_results(data: dict):
+    """Retourne les résultats finaux du matching à partir des réponses du questionnaire."""
+    try:
+        from questionnaire_engine import QuestionnaireState
+        state = QuestionnaireState(**data.get("state", data))
+        results = await _qengine.get_results(db, state)
+        return {"status": "success", **results}
+    except Exception as e:
+        logger.error(f"❌ Erreur résultats questionnaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/aides")
 async def create_or_update_aide(aide: AideAgricole):
     aide_dict = aide.dict()

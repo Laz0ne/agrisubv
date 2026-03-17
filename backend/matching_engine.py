@@ -6,7 +6,7 @@ Calcule le score de compatibilité entre un profil agriculteur et une aide
 from typing import List, Optional, Tuple
 from models_v2 import (
     AideAgricoleV2, ProfilAgriculteur, ResultatMatching, 
-    DetailCritere, TypeProduction, TypeProjet
+    DetailCritere, TypeProduction, TypeProjet, StatutMatching
 )
 import logging
 
@@ -125,6 +125,9 @@ class MatchingEngine:
         resume = self._generer_resume(eligible, score_final, criteres_bloquants_ko)
         recommandations = self._generer_recommandations(aide, profil, details_criteres, criteres_bloquants_ko)
         
+        # Statut de matching à 4 niveaux
+        statut_matching = self._get_statut_matching(score_final, eligible, criteres_bloquants_ko, details_criteres)
+        
         return ResultatMatching(
             aide_id=aide.aid_id,
             profil_id=profil.profil_id,
@@ -137,8 +140,31 @@ class MatchingEngine:
             montant_estime_min=montant_min,
             montant_estime_max=montant_max,
             resume=resume,
-            recommandations=recommandations
+            recommandations=recommandations,
+            statut_matching=statut_matching
         )
+    
+    def _get_statut_matching(
+        self,
+        score: float,
+        eligible: bool,
+        criteres_bloquants_ko: list,
+        details_criteres: list
+    ) -> str:
+        """
+        Classifie le résultat du matching en 4 niveaux :
+        - tres_probable : éligible ET score >= 80
+        - probable : éligible ET score >= 60
+        - a_verifier : non éligible mais aucun critère bloquant, ou score entre 40-59
+        - non_retenue : critère bloquant échoué ou score < 40
+        """
+        if criteres_bloquants_ko or score < 40.0:
+            return StatutMatching.NON_RETENUE.value
+        if eligible and score >= 80.0:
+            return StatutMatching.TRES_PROBABLE.value
+        if eligible and score >= 60.0:
+            return StatutMatching.PROBABLE.value
+        return StatutMatching.A_VERIFIER.value
     
     def _evaluer_localisation(
         self, 

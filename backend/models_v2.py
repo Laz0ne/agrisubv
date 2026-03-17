@@ -3,7 +3,7 @@ Modèles de données V2 pour AgriSubv
 Version optimisée pour gérer 1000+ aides avec critères enrichis
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from enum import Enum
@@ -69,7 +69,23 @@ class TypeMontant(str, Enum):
     UNITE = "Unité"
 
 
+class StatutMatching(str, Enum):
+    """Statut de correspondance à 4 niveaux"""
+    TRES_PROBABLE = "tres_probable"
+    PROBABLE = "probable"
+    A_VERIFIER = "a_verifier"
+    NON_RETENUE = "non_retenue"
+
+
 # ============ SOUS-MODÈLES ============
+
+class ConditionAide(BaseModel):
+    """Condition structurée pour une aide"""
+    criterion: str
+    operator: str = "in"
+    value: Union[List[Any], Any] = None
+    mandatory: bool = True
+    weight: float = 10.0
 
 class CriteresEligibilite(BaseModel):
     """Critères d'éligibilité détaillés pour une aide"""
@@ -157,6 +173,7 @@ class AideAgricoleV2(BaseModel):
     
     confiance: float = 1.0
     tags: List[str] = Field(default_factory=list)
+    conditions: List[ConditionAide] = Field(default_factory=list)
     
     raw_data: Optional[Dict[str, Any]] = None
 
@@ -294,6 +311,7 @@ class ResultatMatching(BaseModel):
     
     resume: str = ""
     recommandations: List[str] = Field(default_factory=list)
+    statut_matching: Optional[str] = None
     
     date_matching: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
