@@ -423,23 +423,91 @@ class QuestionnaireEngine:
             return {"min": criteres.superficie_min, "max": criteres.superficie_max}
         return None
 
+    # ------------------------------------------------------------------ #
+    #  LISTES DE RÉFÉRENCE FRANÇAISES (fallback si aucune aide renseignée) #
+    # ------------------------------------------------------------------ #
+
+    _FALLBACK_OPTIONS: Dict[str, List[str]] = {
+        "region": [
+            "Auvergne-Rhône-Alpes",
+            "Bourgogne-Franche-Comté",
+            "Bretagne",
+            "Centre-Val de Loire",
+            "Corse",
+            "Grand Est",
+            "Guadeloupe",
+            "Guyane",
+            "Hauts-de-France",
+            "Île-de-France",
+            "La Réunion",
+            "Martinique",
+            "Mayotte",
+            "Normandie",
+            "Nouvelle-Aquitaine",
+            "Occitanie",
+            "Pays de la Loire",
+            "Provence-Alpes-Côte d'Azur",
+        ],
+        "departement": [
+            "01", "02", "03", "04", "05", "06", "07", "08", "09",
+            "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+            "21", "22", "23", "24", "25", "26", "27", "28", "29",
+            "30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
+            "40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
+            "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+            "60", "61", "62", "63", "64", "65", "66", "67", "68", "69",
+            "70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
+            "80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
+            "90", "91", "92", "93", "94", "95",
+            "971", "972", "973", "974", "976",
+        ],
+        "statuts_juridiques": [sj.value for sj in StatutJuridique],
+        "types_production": [tprod.value for tprod in TypeProduction],
+        "types_projets": [tproj.value for tproj in TypeProjet],
+        "labels_requis": [
+            "Agriculture Biologique (AB)",
+            "Haute Valeur Environnementale (HVE)",
+            "Label Rouge",
+            "AOC/AOP",
+            "IGP",
+            "STG",
+            "Demeter",
+            "Nature & Progrès",
+            "GlobalGAP",
+        ],
+    }
+
     def _extract_options(self, aids: list, criterion_id: str) -> Optional[List[dict]]:
-        """Extrait les valeurs distinctes pour un critère depuis les aides restantes."""
+        """
+        Extrait les valeurs distinctes pour un critère depuis les aides restantes.
+        Si aucune option n'est trouvée dans les aides, utilise les listes de référence
+        françaises complètes comme fallback (les deux sont fusionnées et dédupliquées).
+        """
         q_type = self.CRITERION_DEFINITIONS.get(criterion_id, {}).get("question_type", "select")
         if q_type in ("number", "boolean"):
             return None
 
-        seen = set()
-        options = []
+        seen: set = set()
+        options: List[dict] = []
+
+        # Extraire les options réelles depuis les aides en base
         for aide in aids:
             values = self._get_criterion_values(aide.criteres, criterion_id)
             if not values or not isinstance(values, list):
                 continue
             for v in values:
-                sv = str(v)
-                if sv not in seen:
+                sv = str(v).strip()
+                if sv and sv not in seen:
                     seen.add(sv)
                     options.append({"value": sv, "label": sv})
+
+        # Fusionner avec les valeurs de référence (fallback)
+        fallback_values = self._FALLBACK_OPTIONS.get(criterion_id, [])
+        for fv in fallback_values:
+            sv = str(fv).strip()
+            if sv and sv not in seen:
+                seen.add(sv)
+                options.append({"value": sv, "label": sv})
 
         return sorted(options, key=lambda o: o["label"]) if options else None
 
