@@ -344,7 +344,13 @@ class AidesTerritoiresSync:
         perimeter = aide_data.get('perimeter', {})
         if not perimeter:
             return ["National"], []
-        
+
+        if isinstance(perimeter, str):
+            normalized = perimeter.strip().lower()
+            if normalized in ('france', 'france entière', 'national', 'france métropolitaine'):
+                return ["National"], []
+            return [perimeter], []
+
         perimeter_name = perimeter.get('name', '')
         scale = perimeter.get('scale', '').lower()
         
@@ -596,7 +602,7 @@ class AidesTerritoiresSync:
             statut=statut,
             criteres=criteres,
             montant=montant,
-            conditions_eligibilite=aide_data.get('eligibility', ''),
+            conditions_eligibilite=aide_data.get('eligibility') or '',
             demarche=aide_data.get('application_url', ''),
             lien_officiel=url,
             confiance=0.8,
