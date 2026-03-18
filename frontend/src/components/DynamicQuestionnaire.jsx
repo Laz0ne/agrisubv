@@ -592,16 +592,23 @@ export default function DynamicQuestionnaire({ onComplete }) {
     // Normalize adaptive question to the format expected by question components
     const normalizeAdaptiveQuestion = (q) => {
       if (!q) return null;
+      let type = q.question_type === 'boolean' ? 'radio' : q.question_type;
+      let options =
+        q.question_type === 'boolean'
+          ? [{ value: true, label: 'Oui' }, { value: false, label: 'Non' }]
+          : q.options || [];
+      // Fall back to text input when select/multiselect has no options
+      if ((type === 'select' || type === 'multiselect') && options.length === 0) {
+        type = 'text';
+        options = [];
+      }
       return {
         id: q.criterion_id,
-        type: q.question_type === 'boolean' ? 'radio' : q.question_type,
+        type,
         label: q.label,
         required: q.is_blocking || false,
         help_text: q.help_text || null,
-        options:
-          q.question_type === 'boolean'
-            ? [{ value: true, label: 'Oui' }, { value: false, label: 'Non' }]
-            : q.options || [],
+        options,
       };
     };
 

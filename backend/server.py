@@ -894,9 +894,55 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+async def _auto_sync_background():
+    """
+    Tâche de fond : vérifie le nombre d'aides en base et lance une synchro
+    depuis Aides-Territoires si nécessaire.
+    - Skippée si AUTO_SYNC_ON_STARTUP=false
+    - Skippée si une synchro a eu lieu dans les dernières 24 heures
+    - Skippée si la base contient déjà >= AUTO_SYNC_THRESHOLD aides
+    """
+    AUTO_SYNC_THRESHOLD = int(os.environ.get("AUTO_SYNC_THRESHOLD", "50"))
+    SYNC_COOLDOWN_HOURS = int(os.environ.get("AUTO_SYNC_COOLDOWN_HOURS", "24"))
+
+    try:
+        count = await db.aides_v2.count_documents({"statut": "active"})
+        logger.info(f"🔢 Aides en base (aides_v2 actives) : {count}")
+
+        if count >= AUTO_SYNC_THRESHOLD:
+            logger.info(f"✅ Base suffisamment peuplée ({count} aides) — pas de synchro automatique")
+            return
+
+        # Vérifier le cooldown via sync_metadata
+        from datetime import datetime, timezone, timedelta
+        meta = await db.sync_metadata.find_one({"key": "last_sync_aides_territoires_v2"})
+        if meta and meta.get("last_sync"):
+            last_sync = meta["last_sync"]
+            if isinstance(last_sync, datetime):
+                last_sync_utc = last_sync.replace(tzinfo=timezone.utc) if last_sync.tzinfo is None else last_sync
+                elapsed = datetime.now(timezone.utc) - last_sync_utc
+                if elapsed < timedelta(hours=SYNC_COOLDOWN_HOURS):
+                    logger.info(f"⏳ Dernière synchro il y a {elapsed} — cooldown actif ({SYNC_COOLDOWN_HOURS}h), skip")
+                    return
+
+        logger.info(f"🔄 Lancement synchro automatique Aides-Territoires ({count} aides < seuil {AUTO_SYNC_THRESHOLD})…")
+        result = await sync_aides_territoires_v2(db)
+
+        # Stocker le timestamp de la synchro
+        await db.sync_metadata.update_one(
+            {"key": "last_sync_aides_territoires_v2"},
+            {"$set": {"key": "last_sync_aides_territoires_v2", "last_sync": datetime.now(timezone.utc), "last_result": result}},
+            upsert=True,
+        )
+        inserted = result.get("inserted", 0) if isinstance(result, dict) else 0
+        logger.info(f"✅ Synchro automatique terminée — {inserted} aides insérées/mises à jour")
+    except Exception as e:
+        logger.error(f"❌ Erreur synchro automatique au démarrage: {e}")
+
+
 @app.on_event("startup")
 async def create_indexes():
-    """Crée les index MongoDB"""
+    """Crée les index MongoDB et lance la synchro automatique si nécessaire"""
     try:
         logger.info("🔧 Création index MongoDB...")
         
@@ -908,6 +954,14 @@ async def create_indexes():
         logger.info("✅ Index créés")
     except Exception as e:
         logger.error(f"❌ Erreur index: {e}")
+
+    # Synchro automatique en arrière-plan
+    auto_sync_enabled = os.environ.get("AUTO_SYNC_ON_STARTUP", "true").lower() not in ("false", "0", "no")
+    if auto_sync_enabled:
+        import asyncio
+        asyncio.create_task(_auto_sync_background())
+    else:
+        logger.info("ℹ️  AUTO_SYNC_ON_STARTUP=false — synchro automatique désactivée")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -336,7 +336,10 @@ class TestQuestionnaireEngine:
         values = [o["value"] for o in options]
         assert "Occitanie" in values
         assert "Bretagne" in values
-        assert len(set(values)) == 2  # Pas de doublons
+        # No duplicates (set size equals list size)
+        assert len(set(values)) == len(values)
+        # Fallback regions are also included
+        assert len(values) >= 2
 
     def test_extract_options_number_returns_none(self):
         aids = [make_aide("a1", age_min=18, age_max=40)]
