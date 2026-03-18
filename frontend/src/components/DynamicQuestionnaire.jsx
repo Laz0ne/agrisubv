@@ -7,6 +7,10 @@ import QuestionText from './QuestionText';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://agrisubv-backend.onrender.com/api';
 
+const CONFIG_FETCH_TIMEOUT_MS = 8000;
+const MAX_ADAPTIVE_QUESTIONS = 12;
+const QUASI_ELIGIBLE_SCORE_THRESHOLD = 40;
+
 // Skeleton loader component
 function QuestionnaireSkeleton() {
   return (
@@ -242,36 +246,71 @@ const FALLBACK_CONFIG = {
 };
 
 export default function DynamicQuestionnaire({ onComplete }) {
-  const [config, setConfig] = useState(null);
+  // mode: null = initializing, 'adaptive' = adaptive engine, 'static' = static sections
+  const [mode, setMode] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // ── Static mode state ────────────────────────────────────────────────────
+  const [config, setConfig] = useState(FALLBACK_CONFIG);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [errors, setErrors] = useState({});
+
+  // ── Adaptive mode state ──────────────────────────────────────────────────
+  const [adaptiveState, setAdaptiveState] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [adaptiveAnswer, setAdaptiveAnswer] = useState(null);
+  const [adaptiveError, setAdaptiveError] = useState(null);
+  const [adaptiveDone, setAdaptiveDone] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
 
-  // Charger la config avec fallback immédiat
+  // ── Initialization ───────────────────────────────────────────────────────
   useEffect(() => {
-    // Utiliser le fallback immédiatement pour affichage rapide
-    setConfig(FALLBACK_CONFIG);
-    setLoading(false);
-    
-    // Puis essayer de charger la config du serveur en arrière-plan
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5s
-    
-    fetch(`${API_BASE_URL}/questionnaire/config`, { signal: controller.signal })
-      .then(res => res.json())
-      .then(data => {
-        clearTimeout(timeoutId);
-        if (data.status === 'success' && data.config) {
+    const timeoutId = setTimeout(() => controller.abort(), CONFIG_FETCH_TIMEOUT_MS);
+
+    const init = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/questionnaire/config`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+
+        if (data.status === 'success' && data.config?.engine === 'dynamic') {
+          // Adaptive engine available — reconstruct initial state from config response
+          const initialState = {
+            session_id: data.config.session_id,
+            answers: {},
+            remaining_aids_count: data.config.total_aids,
+            total_aids_count: data.config.total_aids,
+            questions_asked: [],
+            is_complete: false,
+          };
+          setAdaptiveState(initialState);
+          setCurrentQuestion(data.config.first_question || null);
+          setMode('adaptive');
+        } else if (data.status === 'success' && data.config?.sections) {
+          // Static config with sections
           setConfig(data.config);
+          setMode('static');
+        } else {
+          // Unknown format or error — use FALLBACK_CONFIG
+          setMode('static');
         }
-      })
-      .catch(() => {
-        // Garder le fallback en cas d'erreur
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // Network error: fall back to static FALLBACK_CONFIG
+          console.warn('Questionnaire init failed, using fallback:', err);
+        }
+        setMode('static');
+      } finally {
         clearTimeout(timeoutId);
-      });
-    
+        setLoading(false);
+      }
+    };
+
+    init();
     return () => {
       controller.abort();
       clearTimeout(timeoutId);
@@ -435,11 +474,287 @@ export default function DynamicQuestionnaire({ onComplete }) {
     }
   };
 
-  if (loading) {
+  // ── Adaptive mode handlers ───────────────────────────────────────────────
+
+  const handleAdaptiveNext = async () => {
+    const isAnswerEmpty =
+      adaptiveAnswer === null ||
+      adaptiveAnswer === undefined ||
+      adaptiveAnswer === '' ||
+      (Array.isArray(adaptiveAnswer) && adaptiveAnswer.length === 0);
+
+    if (isAnswerEmpty && currentQuestion?.is_blocking) {
+      setAdaptiveError('Ce champ est requis');
+      return;
+    }
+
+    setSubmitting(true);
+    setAdaptiveError(null);
+
+    try {
+      // Submit the answer
+      const answerRes = await fetch(`${API_BASE_URL}/questionnaire/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: adaptiveState,
+          criterion_id: currentQuestion.criterion_id,
+          value: isAnswerEmpty ? null : adaptiveAnswer,
+        }),
+      });
+      const answerData = await answerRes.json();
+
+      if (answerData.status !== 'success') throw new Error('Erreur soumission réponse');
+
+      const newState = answerData.state;
+      setAdaptiveState(newState);
+
+      if (newState.is_complete) {
+        setAdaptiveDone(true);
+        setCurrentQuestion(null);
+        return;
+      }
+
+      // Get next question
+      const nextRes = await fetch(`${API_BASE_URL}/questionnaire/next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: newState }),
+      });
+      const nextData = await nextRes.json();
+
+      if (nextData.status !== 'success') throw new Error('Erreur récupération question');
+
+      const nextQ = nextData.question;
+      if (!nextQ || nextQ.is_complete) {
+        setAdaptiveDone(true);
+        setCurrentQuestion(null);
+      } else {
+        setCurrentQuestion(nextQ);
+        setAdaptiveAnswer(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err) {
+      console.error('Erreur adaptive:', err);
+      setAdaptiveError('Erreur de connexion. Veuillez réessayer.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAdaptiveResults = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/questionnaire/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: adaptiveState }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        // Normalize to the format expected by ResultsPage
+        const results = {
+          ...data,
+          total_aides: data.stats?.total_evaluated || 0,
+          aides_eligibles: data.stats?.eligible_count || 0,
+          aides_quasi_eligibles:
+            (data.resultats || []).filter(r => !r.eligible && r.score >= QUASI_ELIGIBLE_SCORE_THRESHOLD).length,
+          montant_total_estime_min: 0,
+          montant_total_estime_max: 0,
+        };
+        onComplete(results, data.profil);
+      } else {
+        alert('Erreur lors du calcul. Veuillez réessayer.');
+      }
+    } catch (err) {
+      console.error('Erreur résultats:', err);
+      alert('Erreur de connexion. Veuillez réessayer.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Render: loading ──────────────────────────────────────────────────────
+
+  if (loading || mode === null) {
     return <QuestionnaireSkeleton />;
   }
 
-  if (!config) {
+  // ── Render: adaptive mode ────────────────────────────────────────────────
+
+  if (mode === 'adaptive') {
+    const questionsAnswered = adaptiveState?.questions_asked?.length || 0;
+    const remainingAids = adaptiveState?.remaining_aids_count || 0;
+    const totalAids = adaptiveState?.total_aids_count || 0;
+    const progress = Math.max(5, Math.min((questionsAnswered / MAX_ADAPTIVE_QUESTIONS) * 100, 100));
+
+    // Normalize adaptive question to the format expected by question components
+    const normalizeAdaptiveQuestion = (q) => {
+      if (!q) return null;
+      return {
+        id: q.criterion_id,
+        type: q.question_type === 'boolean' ? 'radio' : q.question_type,
+        label: q.label,
+        required: q.is_blocking || false,
+        help_text: q.help_text || null,
+        options:
+          q.question_type === 'boolean'
+            ? [{ value: true, label: 'Oui' }, { value: false, label: 'Non' }]
+            : q.options || [],
+      };
+    };
+
+    const normalizedQuestion = currentQuestion
+      ? normalizeAdaptiveQuestion(currentQuestion)
+      : null;
+
+    const renderAdaptiveQuestion = (q) => {
+      if (!q) return null;
+      const props = {
+        question: q,
+        value: adaptiveAnswer,
+        onChange: (val) => {
+          setAdaptiveAnswer(val);
+          setAdaptiveError(null);
+        },
+        error: adaptiveError,
+      };
+      switch (q.type) {
+        case 'select':     return <QuestionSelect     key={q.id} {...props} />;
+        case 'multiselect':return <QuestionMultiSelect key={q.id} {...props} />;
+        case 'number':     return <QuestionNumber      key={q.id} {...props} />;
+        case 'radio':      return <QuestionRadio       key={q.id} {...props} />;
+        case 'text':       return <QuestionText        key={q.id} {...props} />;
+        default:           return null;
+      }
+    };
+
+    // "Done" screen
+    if (adaptiveDone) {
+      return (
+        <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
+          <div className="card p-8 text-center">
+            <div className="text-5xl mb-4" aria-hidden="true">🎯</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Analyse terminée !
+            </h2>
+            <p className="text-gray-600 mb-1">
+              {questionsAnswered} question(s) répondue(s)
+            </p>
+            <p className="text-gray-600 mb-6">
+              {remainingAids} aide(s) potentielle(s) identifiée(s) sur {totalAids}
+            </p>
+            <button
+              onClick={handleAdaptiveResults}
+              disabled={submitting}
+              aria-disabled={submitting}
+              className="btn btn-primary flex items-center gap-2 mx-auto"
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Calcul en cours…
+                </>
+              ) : (
+                <>
+                  Voir mes aides
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Question screen
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
+        {/* Header with progress */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-3">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-green-600">
+                <line x1="14" y1="26" x2="14" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <ellipse cx="14" cy="5" rx="3" ry="4.5" fill="currentColor" opacity="0.9"/>
+                <ellipse cx="11" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.85" transform="rotate(-20 11 10)"/>
+                <ellipse cx="10" cy="16" rx="2.5" ry="3.5" fill="currentColor" opacity="0.75" transform="rotate(-25 10 16)"/>
+                <ellipse cx="17" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.85" transform="rotate(20 17 10)"/>
+                <ellipse cx="18" cy="16" rx="2.5" ry="3.5" fill="currentColor" opacity="0.75" transform="rotate(25 18 16)"/>
+              </svg>
+              Trouvez vos aides
+            </h1>
+            <span className="badge badge-info" aria-label={`${questionsAnswered} réponse(s) sur ${MAX_ADAPTIVE_QUESTIONS} maximum`}>
+              {questionsAnswered} / {MAX_ADAPTIVE_QUESTIONS}
+            </span>
+          </div>
+
+          <div className="progress-container" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progression du questionnaire">
+            <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+            <span className="flex items-center gap-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              {remainingAids} aide(s) restante(s) sur {totalAids}
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Environ 3 minutes
+            </span>
+          </div>
+        </div>
+
+        {/* Current question */}
+        {normalizedQuestion && (
+          <div className="card p-6 mb-6 animate-fade-in" key={currentQuestion.criterion_id}>
+            {renderAdaptiveQuestion(normalizedQuestion)}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleAdaptiveNext}
+            disabled={submitting}
+            aria-disabled={submitting}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Traitement…
+              </>
+            ) : (
+              <>
+                Suivant
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: static mode ──────────────────────────────────────────────────
+
+  if (!config || !config.sections) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
