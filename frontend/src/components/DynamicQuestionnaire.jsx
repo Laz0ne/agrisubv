@@ -338,14 +338,14 @@ export default function DynamicQuestionnaire({ onComplete }) {
       case '>': return triggerValue > value;
       case '==': return triggerValue === value;
       case '!=': return triggerValue !== value;
-      case 'in': return values?.includes(triggerValue);
+      case 'in': return Array.isArray(values) && values.includes(triggerValue);
       default: return true;
     }
   };
 
   const validateSection = (section) => {
     const newErrors = {};
-    section.questions.forEach(question => {
+    (section.questions || []).filter(q => q != null).forEach(question => {
       if (!isQuestionVisible(question)) return;
       const answer = answers[question.id];
       
@@ -819,7 +819,7 @@ export default function DynamicQuestionnaire({ onComplete }) {
         </div>
 
         <div className="space-y-6">
-          {currentSection.questions.map(question => renderQuestion(question))}
+          {(currentSection.questions || []).filter(q => q != null).map(question => renderQuestion(question))}
         </div>
       </div>
 

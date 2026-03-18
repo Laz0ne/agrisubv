@@ -1,8 +1,9 @@
-export default function QuestionMultiSelect({ question, value = [], onChange, error }) {
+export default function QuestionMultiSelect({ question, value, onChange, error }) {
+  const safeValue = Array.isArray(value) ? value : [];
   const handleToggle = (optionValue) => {
-    const newValue = value.includes(optionValue)
-      ? value.filter(v => v !== optionValue)
-      : [...value, optionValue];
+    const newValue = safeValue.includes(optionValue)
+      ? safeValue.filter(v => v !== optionValue)
+      : [...safeValue, optionValue];
     onChange(newValue);
   };
 
@@ -29,7 +30,7 @@ export default function QuestionMultiSelect({ question, value = [], onChange, er
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label={question.label}>
         {question.options?.map((option, index) => {
-          const isSelected = value.includes(option.value);
+          const isSelected = safeValue.includes(option.value);
           const delayClass = `animation-delay-${Math.min(index * 50, 500)}`;
           return (
             <div
@@ -57,10 +58,10 @@ export default function QuestionMultiSelect({ question, value = [], onChange, er
         })}
       </div>
       
-      {value.length > 0 && (
+      {safeValue.length > 0 && (
         <div className="flex items-center gap-2 text-sm">
           <span className="badge badge-success">
-            ✓ {value.length} sélectionné{value.length > 1 ? 's' : ''}
+            ✓ {safeValue.length} sélectionné{safeValue.length > 1 ? 's' : ''}
           </span>
         </div>
       )}
