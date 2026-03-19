@@ -216,7 +216,7 @@ class AidesTerritoiresSync:
                     params.update(search_config)
                     
                     try:
-                        async with session.get(AIDES_TERRITOIRES_API_URL, params=params) as response:
+                        async with session.get(AIDES_TERRITOIRES_API_URL, params=params, headers={'Authorization': f'Bearer {bearer_token}'}) as response:
                             if response.status == 401:
                                 logger.error(f"❌ Token expiré ou invalide (401)")
                                 # Réessayer avec un nouveau token
@@ -544,7 +544,7 @@ class AidesTerritoiresSync:
                 deadline = datetime.fromisoformat(date_limite.replace('Z', '+00:00'))
                 if deadline < datetime.now(timezone.utc):
                     statut = 'expiree'
-            except:
+            except (ValueError, TypeError):
                 pass
         
         # Détections intelligentes
@@ -602,8 +602,8 @@ class AidesTerritoiresSync:
             statut=statut,
             criteres=criteres,
             montant=montant,
-            conditions_eligibilite=aide_data.get('eligibility') or '',
-            demarche=aide_data.get('application_url', ''),
+            conditions_eligibilite=str(aide_data.get('eligibility') or ''),
+            demarche=str(aide_data.get('application_url') or ''),
             lien_officiel=url,
             confiance=0.8,
             tags=tags,

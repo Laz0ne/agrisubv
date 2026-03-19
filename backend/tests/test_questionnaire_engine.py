@@ -210,6 +210,22 @@ class TestQuestionnaireEngine:
         result = self.engine._filter_aids_by_answers(aids, {"region": "Occitanie"})
         assert len(result) == 2  # a1 (Occitanie) + a3 (pas de critère)
 
+    def test_filter_aids_national_region_compatible_with_any_region(self):
+        # Aide nationale (regions=["National"]) doit matcher toutes les régions
+        aids = [
+            make_aide("a1", regions=["Bretagne"]),
+            make_aide("a2", regions=["National"]),
+            make_aide("a3", regions=["France entière"]),
+            make_aide("a4", regions=["Occitanie"]),
+        ]
+        result = self.engine._filter_aids_by_answers(aids, {"region": "Bretagne"})
+        # a1 (Bretagne match), a2 (National = universal), a3 (France entière = universal)
+        # a4 (Occitanie) should NOT match
+        assert any(a.aid_id == "a1" for a in result)
+        assert any(a.aid_id == "a2" for a in result)
+        assert any(a.aid_id == "a3" for a in result)
+        assert not any(a.aid_id == "a4" for a in result)
+
     def test_filter_aids_by_multiselect_production(self):
         aids = [
             make_aide("a1", types_production=[TypeProduction.CEREALES]),
@@ -255,8 +271,18 @@ class TestQuestionnaireEngine:
         assert self.engine._check_convergence(state, 100) is True
 
     def test_convergence_few_aids(self):
+        # With MIN_QUESTIONS_BEFORE_CONVERGENCE = 3, convergence on low aid count
+        # only triggers after at least 3 questions have been asked.
+        state_with_enough = QuestionnaireState(
+            session_id="test", questions_asked=["region", "types_production", "statuts_juridiques"]
+        )
+        assert self.engine._check_convergence(state_with_enough, 3) is True
+
+    def test_convergence_few_aids_early_no_trigger(self):
+        # Fewer than MIN_QUESTIONS_BEFORE_CONVERGENCE asked → convergence NOT triggered
+        # even with very few aids remaining (fixes the "1 question then done" bug)
         state = QuestionnaireState(session_id="test", questions_asked=["region"])
-        assert self.engine._check_convergence(state, 3) is True
+        assert self.engine._check_convergence(state, 3) is False
 
     def test_no_convergence_many_aids(self):
         state = QuestionnaireState(session_id="test", questions_asked=["region"])

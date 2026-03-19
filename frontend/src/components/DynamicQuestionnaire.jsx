@@ -262,6 +262,11 @@ export default function DynamicQuestionnaire({ onComplete }) {
   const [adaptiveAnswer, setAdaptiveAnswer] = useState(null);
   const [adaptiveError, setAdaptiveError] = useState(null);
   const [adaptiveDone, setAdaptiveDone] = useState(false);
+  // History for "Précédent" navigation in adaptive mode
+  const [adaptiveHistory, setAdaptiveHistory] = useState([]);
+
+  // ── Shared error for API failures (replaces alert()) ─────────────────────
+  const [submitError, setSubmitError] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -446,11 +451,11 @@ export default function DynamicQuestionnaire({ onComplete }) {
       if (response.ok) {
         onComplete(result, profil);
       } else {
-        alert('Erreur lors du calcul. Veuillez réessayer.');
+        setSubmitError('Erreur lors du calcul. Veuillez réessayer.');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur de connexion. Veuillez réessayer.');
+      setSubmitError('Erreur de connexion. Veuillez réessayer.');
     } finally {
       setSubmitting(false);
     }
@@ -507,6 +512,9 @@ export default function DynamicQuestionnaire({ onComplete }) {
       if (answerData.status !== 'success') throw new Error('Erreur soumission réponse');
 
       const newState = answerData.state;
+
+      // Save current step to history before moving forward
+      setAdaptiveHistory(prev => [...prev, { state: adaptiveState, question: currentQuestion, answer: adaptiveAnswer }]);
       setAdaptiveState(newState);
 
       if (newState.is_complete) {
@@ -542,6 +550,76 @@ export default function DynamicQuestionnaire({ onComplete }) {
     }
   };
 
+  const handleAdaptivePrevious = () => {
+    if (adaptiveHistory.length === 0) return;
+    const prev = adaptiveHistory[adaptiveHistory.length - 1];
+    setAdaptiveHistory(h => h.slice(0, -1));
+    setAdaptiveState(prev.state);
+    setCurrentQuestion(prev.question);
+    setAdaptiveAnswer(prev.answer);
+    setAdaptiveDone(false);
+    setAdaptiveError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAdaptiveSkip = async () => {
+    setSubmitting(true);
+    setAdaptiveError(null);
+
+    try {
+      // Submit null answer (skip)
+      const answerRes = await fetch(`${API_BASE_URL}/questionnaire/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: adaptiveState,
+          criterion_id: currentQuestion.criterion_id,
+          value: null,
+        }),
+      });
+      const answerData = await answerRes.json();
+
+      if (answerData.status !== 'success') throw new Error('Erreur soumission réponse');
+
+      const newState = answerData.state;
+
+      // Save current step to history
+      setAdaptiveHistory(prev => [...prev, { state: adaptiveState, question: currentQuestion, answer: null }]);
+      setAdaptiveState(newState);
+
+      if (newState.is_complete) {
+        setAdaptiveDone(true);
+        setCurrentQuestion(null);
+        return;
+      }
+
+      // Get next question
+      const nextRes = await fetch(`${API_BASE_URL}/questionnaire/next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: newState }),
+      });
+      const nextData = await nextRes.json();
+
+      if (nextData.status !== 'success') throw new Error('Erreur récupération question');
+
+      const nextQ = nextData.question;
+      if (!nextQ || nextQ.is_complete) {
+        setAdaptiveDone(true);
+        setCurrentQuestion(null);
+      } else {
+        setCurrentQuestion(nextQ);
+        setAdaptiveAnswer(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err) {
+      console.error('Erreur adaptive skip:', err);
+      setAdaptiveError('Erreur de connexion. Veuillez réessayer.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleAdaptiveResults = async () => {
     setSubmitting(true);
     try {
@@ -565,11 +643,11 @@ export default function DynamicQuestionnaire({ onComplete }) {
         };
         onComplete(results, data.profil);
       } else {
-        alert('Erreur lors du calcul. Veuillez réessayer.');
+        setSubmitError('Erreur lors du calcul. Veuillez réessayer.');
       }
     } catch (err) {
       console.error('Erreur résultats:', err);
-      alert('Erreur de connexion. Veuillez réessayer.');
+      setSubmitError('Erreur de connexion. Veuillez réessayer.');
     } finally {
       setSubmitting(false);
     }
@@ -652,6 +730,12 @@ export default function DynamicQuestionnaire({ onComplete }) {
             <p className="text-gray-600 mb-6">
               {remainingAids} aide(s) potentielle(s) identifiée(s) sur {totalAids}
             </p>
+            {submitError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm" role="alert">
+                {submitError}
+                <button onClick={() => setSubmitError(null)} className="ml-2 underline text-red-600">Fermer</button>
+              </div>
+            )}
             <button
               onClick={handleAdaptiveResults}
               disabled={submitting}
@@ -730,30 +814,58 @@ export default function DynamicQuestionnaire({ onComplete }) {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
           <button
-            onClick={handleAdaptiveNext}
-            disabled={submitting}
-            aria-disabled={submitting}
-            className="btn btn-primary flex items-center gap-2"
+            onClick={handleAdaptivePrevious}
+            disabled={adaptiveHistory.length === 0 || submitting}
+            aria-disabled={adaptiveHistory.length === 0 || submitting}
+            className={`btn flex items-center gap-2 ${
+              adaptiveHistory.length === 0
+                ? 'opacity-40 cursor-not-allowed bg-gray-100 text-gray-400'
+                : 'btn-secondary'
+            }`}
           >
-            {submitting ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-                Traitement…
-              </>
-            ) : (
-              <>
-                Suivant
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </>
-            )}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Précédent
           </button>
+
+          <div className="flex items-center gap-2">
+            {!currentQuestion?.is_blocking && (
+              <button
+                onClick={handleAdaptiveSkip}
+                disabled={submitting}
+                aria-disabled={submitting}
+                className="btn btn-secondary text-sm"
+              >
+                Passer
+              </button>
+            )}
+            <button
+              onClick={handleAdaptiveNext}
+              disabled={submitting}
+              aria-disabled={submitting}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Traitement…
+                </>
+              ) : (
+                <>
+                  Suivant
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -880,7 +992,7 @@ export default function DynamicQuestionnaire({ onComplete }) {
         </button>
       </div>
 
-      {/* Erreurs */}
+      {/* Erreurs de validation */}
       {Object.keys(errors).length > 0 && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl animate-fade-in" role="alert">
           <p className="text-red-800 font-medium flex items-center gap-2">
@@ -889,6 +1001,21 @@ export default function DynamicQuestionnaire({ onComplete }) {
             </svg>
             Veuillez corriger les erreurs avant de continuer.
           </p>
+        </div>
+      )}
+
+      {/* Erreur API */}
+      {submitError && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl animate-fade-in" role="alert">
+          <p className="text-red-800 font-medium flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            {submitError}
+          </p>
+          <button onClick={() => setSubmitError(null)} className="mt-1 text-sm underline text-red-600">
+            Fermer
+          </button>
         </div>
       )}
     </div>

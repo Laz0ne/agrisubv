@@ -64,6 +64,12 @@ class QuestionnaireEngine:
     # Seuil d'aides restantes pour considérer la convergence
     CONVERGENCE_THRESHOLD_COUNT = 5
 
+    # Nombre minimum de questions à poser avant de pouvoir converger sur le seuil d'aides
+    MIN_QUESTIONS_BEFORE_CONVERGENCE = 3
+
+    # Valeurs de périmètre signifiant "toute la France" (aide nationale)
+    NATIONAL_REGION_IDENTIFIERS = frozenset({"National", "France entière", "France"})
+
     # Définitions statiques des critères — ordre suggéré si scores égaux
     CRITERION_DEFINITIONS: Dict[str, dict] = {
         "region": {
@@ -361,6 +367,10 @@ class QuestionnaireEngine:
             # Empty list means no constraint
             if isinstance(crit_values, list) and not crit_values:
                 continue
+            # Aide nationale → compatible avec toutes les régions et tous les départements
+            if criterion_id in ("region", "departement") and isinstance(crit_values, list):
+                if any(v in self.NATIONAL_REGION_IDENTIFIERS for v in crit_values):
+                    continue
             if not self._value_matches(criterion_id, crit_values, value):
                 return False
         return True
@@ -592,8 +602,10 @@ class QuestionnaireEngine:
         """Vérifie si on doit arrêter de poser des questions."""
         if len(state.questions_asked) >= self.MAX_QUESTIONS:
             return True
-        if remaining_aids_count <= self.CONVERGENCE_THRESHOLD_COUNT:
-            return True
+        # Ne pas converger sur le seuil d'aides avant d'avoir posé le minimum de questions
+        if len(state.questions_asked) >= self.MIN_QUESTIONS_BEFORE_CONVERGENCE:
+            if remaining_aids_count <= self.CONVERGENCE_THRESHOLD_COUNT:
+                return True
         unanswered = [
             cid for cid in self.CRITERION_DEFINITIONS
             if cid not in state.questions_asked
