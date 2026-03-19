@@ -197,6 +197,15 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
     return parts.length > 0 ? parts.join(' • ') : null;
   };
 
+  const formatMontantEstime = () => {
+    const min = resultat.montant_estime_min;
+    const max = resultat.montant_estime_max;
+    if (min != null && max != null && min !== max) return `${min.toLocaleString('fr-FR')} € – ${max.toLocaleString('fr-FR')} €`;
+    if (max != null) return `${max.toLocaleString('fr-FR')} €`;
+    if (min != null) return `${min.toLocaleString('fr-FR')} €`;
+    return 'Montant à déterminer';
+  };
+
   return (
     <div
       className={`card ${isEligible ? 'card-eligible' : 'card-quasi'} card-interactive animate-fade-in`}
@@ -216,14 +225,15 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
             <h3 className="text-lg font-bold text-gray-900 mb-1 leading-snug">
               {aide.titre || `Aide ${resultat.aide_id}`}
             </h3>
-            {aide.organisme && (
-              <p className="text-sm text-gray-500 flex items-center gap-1.5 truncate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-                <span className="truncate">{aide.organisme}</span>
-                {aide.programme && <span className="text-gray-400 truncate">• {aide.programme}</span>}
-              </p>
+            <p className="text-sm text-gray-500 flex items-center gap-1.5 truncate">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <span className="truncate">{aide.organisme || 'Organisme non précisé'}</span>
+              {aide.programme && <span className="text-gray-400 truncate">• {aide.programme}</span>}
+            </p>
+            {resultat.resume && (
+              <p className="text-xs text-gray-500 mt-1 italic truncate">{resultat.resume}</p>
             )}
           </div>
 
@@ -246,11 +256,24 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
               📅 Limite: {formatDate(aide.date_limite_depot)}
             </span>
           )}
-          {formatMontant() && (
+          {formatMontant() ? (
             <span className="badge badge-success">💰 {formatMontant()}</span>
+          ) : (
+            <span className="badge badge-neutral">💰 {formatMontantEstime()}</span>
           )}
           {aide.montant?.type && (
             <span className="badge badge-info">{aide.montant.type}</span>
+          )}
+          {(aide.lien_officiel || aide.source_url) && (
+            <a
+              href={aide.lien_officiel || aide.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="badge badge-info hover:opacity-80 transition-opacity"
+            >
+              🔗 Voir l'aide officielle
+            </a>
           )}
           {aide.tags?.slice(0, 3).map((tag, i) => (
             <span key={i} className="badge badge-neutral">{tag}</span>
@@ -276,17 +299,17 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
       {/* Détails expandables */}
       {isExpanded && (
         <div className="border-t border-gray-100 p-6 bg-gradient-to-br from-gray-50 to-white animate-fade-in">
-          {aide.description && (
-            <div className="mb-6">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-                </svg>
-                Description
-              </h4>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">{aide.description}</p>
-            </div>
-          )}
+          <div className="mb-6">
+            <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Description
+            </h4>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
+              {aide.description || 'Aucune description disponible pour cette aide.'}
+            </p>
+          </div>
 
           {aide.conditions_eligibilite && (
             <div className="mb-6">
@@ -385,6 +408,25 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {resultat.recommandations?.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Recommandations
+              </h4>
+              <ul className="space-y-1">
+                {resultat.recommandations.map((rec, i) => (
+                  <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                    <span className="text-amber-500 flex-shrink-0 mt-0.5">→</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
