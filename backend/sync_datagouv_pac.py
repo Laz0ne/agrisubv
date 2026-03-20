@@ -277,6 +277,332 @@ class DataGouvPACSyncer:
         
         return normalized_aide
 
+    def generate_pac_reference_aids(self) -> List[Any]:
+        """Génère les aides PAC de référence sous forme d'AideAgricoleV2"""
+        from models_v2 import (
+            AideAgricoleV2, CriteresEligibilite, MontantAide,
+            TypeMontant, TypeProduction, TypeProjet
+        )
+
+        aides_reference = [
+            AideAgricoleV2(
+                aid_id="PAC-DPB",
+                titre="Droits à Paiement de Base (DPB)",
+                description=(
+                    "L'aide au paiement de base est une aide découplée versée annuellement "
+                    "à tous les agriculteurs actifs disposant de droits à paiement de base (DPB). "
+                    "Le montant varie selon la valeur des DPB détenus et la surface admissible déclarée."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=100.0,
+                    montant_max=300.0,
+                    unite="€/ha",
+                    description="Variable selon la valeur des DPB et la région",
+                ),
+                conditions_eligibilite=(
+                    "Être agriculteur actif, détenir des droits à paiement de base, "
+                    "déclarer des surfaces admissibles via la télédéclaration PAC annuelle."
+                ),
+                tags=["DPB", "paiement de base", "aide découplée", "PAC", "surface", "annuel"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-PVERT",
+                titre="Paiement Vert (Écorégime PAC 2023-2027)",
+                description=(
+                    "L'écorégime remplace le paiement vert depuis 2023. Il récompense les pratiques "
+                    "bénéfiques pour le climat et l'environnement : diversification des cultures, "
+                    "maintien de prairies permanentes, couverture des sols, certification HVE ou bio."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[TypeProjet.ENVIRONNEMENT],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=40.0,
+                    montant_max=145.0,
+                    unite="€/ha",
+                    description="Trois niveaux d'engagement : de base, supérieur, gold",
+                ),
+                conditions_eligibilite=(
+                    "Bénéficier du paiement de base et adopter des pratiques agro-environnementales "
+                    "(diversification, prairies permanentes, certification HVE/bio, etc.)."
+                ),
+                tags=["écorégime", "paiement vert", "HVE", "bio", "prairies", "PAC", "environnement"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-PREDIST",
+                titre="Paiement Redistributif",
+                description=(
+                    "Le paiement redistributif complète le paiement de base pour les 52 premiers "
+                    "hectares de l'exploitation afin de soutenir les petites et moyennes structures. "
+                    "Il est plafonné aux 52 premiers hectares éligibles."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=50.0,
+                    montant_max=100.0,
+                    unite="€/ha (52 premiers ha)",
+                    description="Applicable uniquement sur les 52 premiers hectares",
+                ),
+                conditions_eligibilite=(
+                    "Bénéficier du paiement de base. Le complément est automatiquement calculé "
+                    "sur les 52 premiers hectares éligibles."
+                ),
+                tags=["redistributif", "petite exploitation", "PAC", "complément", "surface"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-ICHN",
+                titre="Indemnité Compensatoire de Handicap Naturel (ICHN)",
+                description=(
+                    "L'ICHN compense les surcoûts de production et les pertes de revenus des "
+                    "agriculteurs installés en zones défavorisées (montagne, piémont, zone défavorisée simple). "
+                    "Elle est modulée selon la zone et la surface."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    zones_specifiques=["Zone de montagne", "Zone défavorisée", "Piémont"],
+                    types_production=[],
+                    types_projets=[],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=25.0,
+                    montant_max=250.0,
+                    unite="€/ha",
+                    description="Varie selon la zone géographique et le type de production",
+                ),
+                conditions_eligibilite=(
+                    "Être installé en zone défavorisée (montagne, piémont ou zone défavorisée simple), "
+                    "détenir au moins 3 ha de SAU, exercer une activité agricole à titre principal."
+                ),
+                tags=["ICHN", "zone montagne", "zone défavorisée", "handicap naturel", "PAC", "compensation"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-MAEC",
+                titre="Mesures Agro-Environnementales et Climatiques (MAEC)",
+                description=(
+                    "Les MAEC rémunèrent les agriculteurs qui s'engagent sur 5 ans dans des pratiques "
+                    "agro-environnementales allant au-delà des exigences réglementaires : réduction des "
+                    "intrants, maintien des prairies, gestion des zones humides, etc."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[TypeProjet.ENVIRONNEMENT],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=50.0,
+                    montant_max=600.0,
+                    unite="€/ha/an",
+                    description="Variable selon le cahier des charges MAEC souscrit",
+                ),
+                conditions_eligibilite=(
+                    "S'engager sur 5 ans dans un cahier des charges MAEC défini localement, "
+                    "respecter l'ensemble des exigences de la mesure souscrite."
+                ),
+                tags=["MAEC", "agro-environnemental", "prairies", "biodiversité", "PAC", "5 ans"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-DJA",
+                titre="Dotation Jeune Agriculteur (DJA)",
+                description=(
+                    "La DJA est une aide forfaitaire à l'installation accordée aux jeunes agriculteurs "
+                    "de moins de 40 ans s'installant pour la première fois. Son montant varie selon "
+                    "la zone d'installation et le projet présenté dans le plan d'entreprise."
+                ),
+                organisme="Ministère de l'Agriculture",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://agriculture.gouv.fr/la-dotation-jeunes-agriculteurs-dja",
+                lien_officiel="https://agriculture.gouv.fr/la-dotation-jeunes-agriculteurs-dja",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    age_max=40,
+                    jeune_agriculteur=True,
+                    premiere_installation=True,
+                    types_production=[],
+                    types_projets=[TypeProjet.INSTALLATION],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.FORFAITAIRE,
+                    montant_min=8000.0,
+                    montant_max=43000.0,
+                    description="Majoré en zone de montagne ou zone défavorisée",
+                ),
+                conditions_eligibilite=(
+                    "Avoir moins de 40 ans, s'installer pour la première fois comme chef d'exploitation, "
+                    "détenir un diplôme agricole de niveau IV minimum, présenter un plan d'entreprise viable."
+                ),
+                tags=["DJA", "jeune agriculteur", "installation", "forfait", "PAC", "première installation"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-BIO-CONV",
+                titre="Aide à la Conversion en Agriculture Biologique",
+                description=(
+                    "Cette aide soutient les agriculteurs qui s'engagent dans la conversion vers "
+                    "l'agriculture biologique. La période de conversion dure 2 à 3 ans selon les "
+                    "productions. Le montant est supérieur à l'aide au maintien bio."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[TypeProjet.CONVERSION_BIO],
+                    labels_bonus=["Agriculture Biologique en conversion"],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=100.0,
+                    montant_max=900.0,
+                    unite="€/ha/an",
+                    description="Variable selon le type de culture/élevage et la région",
+                ),
+                conditions_eligibilite=(
+                    "S'engager dans une démarche de conversion en agriculture biologique certifiée, "
+                    "souscrire un contrat de conversion sur 5 ans avec un organisme certificateur agréé."
+                ),
+                tags=["bio", "conversion bio", "agriculture biologique", "PAC", "environnement"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-BIO-MAINT",
+                titre="Aide au Maintien de l'Agriculture Biologique",
+                description=(
+                    "L'aide au maintien récompense les agriculteurs déjà certifiés en agriculture "
+                    "biologique qui poursuivent leurs pratiques. Elle complète le paiement de base "
+                    "et l'écorégime pour soutenir l'économie des exploitations bio."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[],
+                    labels_requis=["Agriculture Biologique"],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=50.0,
+                    montant_max=600.0,
+                    unite="€/ha/an",
+                    description="Variable selon le type de culture/élevage et la région",
+                ),
+                conditions_eligibilite=(
+                    "Être certifié en agriculture biologique (label AB), maintenir les pratiques "
+                    "biologiques sur les surfaces déclarées, réaliser une télédéclaration PAC annuelle."
+                ),
+                tags=["bio", "maintien bio", "agriculture biologique", "label AB", "PAC"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-ASSUR",
+                titre="Aide à l'Assurance Récolte",
+                description=(
+                    "L'aide à l'assurance récolte subventionne une partie des primes d'assurance "
+                    "multirisques climatiques souscrites par les agriculteurs. Elle vise à développer "
+                    "la couverture des exploitations contre les aléas climatiques."
+                ),
+                organisme="Ministère de l'Agriculture",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://agriculture.gouv.fr/lassurance-recolte",
+                lien_officiel="https://agriculture.gouv.fr/lassurance-recolte",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[],
+                    types_projets=[],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.POURCENTAGE,
+                    taux_min=30.0,
+                    taux_max=70.0,
+                    description="Subvention de 30 à 70 % de la prime d'assurance selon le niveau de couverture",
+                ),
+                conditions_eligibilite=(
+                    "Souscrire un contrat d'assurance multirisques climatiques auprès d'un assureur agréé, "
+                    "exercer une activité agricole sur des cultures admissibles."
+                ),
+                tags=["assurance récolte", "aléas climatiques", "multirisque", "PAC", "subvention prime"],
+            ),
+            AideAgricoleV2(
+                aid_id="PAC-PROTEAG",
+                titre="Aide Couplée Protéagineux et Légumineuses",
+                description=(
+                    "Cette aide couplée soutient la production de légumineuses à graines et de "
+                    "protéagineux (pois, féveroles, lupins, soja) pour réduire la dépendance en "
+                    "protéines végétales et favoriser la rotation des cultures."
+                ),
+                organisme="ASP (Agence de Services et de Paiement)",
+                programme="PAC 2023-2027",
+                source="pac_reference",
+                source_url="https://www.telepac.agriculture.gouv.fr/",
+                lien_officiel="https://www.telepac.agriculture.gouv.fr/",
+                criteres=CriteresEligibilite(
+                    regions=["National"],
+                    types_production=[TypeProduction.GRANDES_CULTURES, TypeProduction.CEREALES],
+                    types_projets=[],
+                ),
+                montant=MontantAide(
+                    type_montant=TypeMontant.SURFACE,
+                    montant_min=80.0,
+                    montant_max=200.0,
+                    unite="€/ha",
+                    description="Variable selon la culture et la campagne",
+                ),
+                conditions_eligibilite=(
+                    "Cultiver des légumineuses à graines ou protéagineux éligibles "
+                    "(pois, féveroles, lupins, soja, lentilles, pois chiches) sur des surfaces admissibles."
+                ),
+                tags=["protéagineux", "légumineuses", "soja", "pois", "féveroles", "PAC", "aide couplée"],
+            ),
+        ]
+
+        return aides_reference
+
 
 async def sync_pac_to_db(db, limit: Optional[int] = None) -> Dict[str, Any]:
     """Synchronise les aides PAC depuis Data.gouv.fr vers MongoDB"""
@@ -320,11 +646,38 @@ async def sync_pac_to_db(db, limit: Optional[int] = None) -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"❌ Erreur insertion aide {aide['aid_id']}: {e}")
             errors_count += 1
+
+    # ── Insertion des aides PAC de référence enrichies dans aides_v2 ─────────
+    logger.info("🌾 Génération des aides PAC de référence enrichies...")
+    aides_reference = syncer.generate_pac_reference_aids()
     
+    ref_inserted = 0
+    ref_updated = 0
+    ref_errors = 0
+
+    for aide_v2 in aides_reference:
+        try:
+            aide_dict = aide_v2.model_dump()
+            existing = await db.aides_v2.find_one({"aid_id": aide_dict['aid_id']})
+            if existing:
+                await db.aides_v2.update_one(
+                    {"aid_id": aide_dict['aid_id']},
+                    {"$set": aide_dict}
+                )
+                ref_updated += 1
+            else:
+                await db.aides_v2.insert_one(aide_dict)
+                ref_inserted += 1
+        except Exception as e:
+            logger.error(f"❌ Erreur insertion aide référence {aide_v2.aid_id}: {e}")
+            ref_errors += 1
+
     logger.info(f"✅ Synchronisation PAC terminée !")
     logger.info(f"   - Nouvelles aides PAC : {inserted_count}")
     logger.info(f"   - Aides PAC mises à jour : {updated_count}")
-    logger.info(f"   - Erreurs : {errors_count}")
+    logger.info(f"   - Aides PAC référence insérées : {ref_inserted}")
+    logger.info(f"   - Aides PAC référence mises à jour : {ref_updated}")
+    logger.info(f"   - Erreurs : {errors_count + ref_errors}")
     
     return {
         "success": True,
@@ -333,7 +686,9 @@ async def sync_pac_to_db(db, limit: Optional[int] = None) -> Dict[str, Any]:
         "total_normalized": len(aides_normalized),
         "inserted": inserted_count,
         "updated": updated_count,
-        "errors": errors_count
+        "reference_inserted": ref_inserted,
+        "reference_updated": ref_updated,
+        "errors": errors_count + ref_errors,
     }
 
 

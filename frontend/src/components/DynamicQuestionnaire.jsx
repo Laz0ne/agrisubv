@@ -815,21 +815,21 @@ export default function DynamicQuestionnaire({ onComplete }) {
 
         {/* Navigation */}
         <div className="flex justify-between items-center">
-          <button
-            onClick={handleAdaptivePrevious}
-            disabled={adaptiveHistory.length === 0 || submitting}
-            aria-disabled={adaptiveHistory.length === 0 || submitting}
-            className={`btn flex items-center gap-2 ${
-              adaptiveHistory.length === 0
-                ? 'opacity-40 cursor-not-allowed bg-gray-100 text-gray-400'
-                : 'btn-secondary'
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Précédent
-          </button>
+          {adaptiveHistory.length > 0 ? (
+            <button
+              onClick={handleAdaptivePrevious}
+              disabled={submitting}
+              aria-disabled={submitting}
+              className="btn btn-secondary flex items-center gap-2"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              </svg>
+              Précédent
+            </button>
+          ) : (
+            <div />
+          )}
 
           <div className="flex items-center gap-2">
             {!currentQuestion?.is_blocking && (
