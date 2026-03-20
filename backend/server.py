@@ -836,12 +836,10 @@ async def get_aides_stats():
 
 # ============ SYNC ENDPOINTS ============
 
-from sync_aides_territoires import sync_aides_to_db
-
 @api_router.post("/sync/aides-territoires")
 async def sync_aides_territoires(limit: Optional[int] = None):
     try:
-        result = await sync_aides_to_db(db, limit=limit)
+        result = await sync_aides_territoires_v2(db, max_pages=limit)
         return result
     except Exception as e:
         logger.error(f"Erreur sync: {e}")
