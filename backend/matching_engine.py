@@ -107,11 +107,12 @@ class MatchingEngine:
         # Calcul du score final
         score_final = min(100.0, max(0.0, score_total))
         
-        # Si critères bloquants non validés, score = 0
+        # Si critères bloquants non validés, pénalité proportionnelle (max -60)
         if criteres_bloquants_ko:
-            score_final = 0.0
+            penalty = min(len(criteres_bloquants_ko) * 15, 60)
+            score_final = max(0.0, score_final - penalty)
         
-        # Éligibilité
+        # Éligibilité : score >= seuil ET aucun critère bloquant échoué
         eligible = score_final >= self.SEUIL_ELIGIBILITE and not criteres_bloquants_ko
         
         # Comptage des critères
@@ -155,16 +156,18 @@ class MatchingEngine:
         Classifie le résultat du matching en 4 niveaux :
         - tres_probable : éligible ET score >= 80
         - probable : éligible ET score >= 60
-        - a_verifier : non éligible mais aucun critère bloquant, ou score entre 40-59
-        - non_retenue : critère bloquant échoué ou score < 40
+        - a_verifier : score >= 40 avec au plus 1 critère bloquant échoué
+                       (inclut les aides presque éligibles)
+        - non_retenue : 2+ critères bloquants échoués, ou score < 40
         """
-        if criteres_bloquants_ko or score < 40.0:
-            return StatutMatching.NON_RETENUE.value
         if eligible and score >= 80.0:
             return StatutMatching.TRES_PROBABLE.value
         if eligible and score >= 60.0:
             return StatutMatching.PROBABLE.value
-        return StatutMatching.A_VERIFIER.value
+        # Presque éligible : score >= 40 avec au plus 1 critère bloquant échoué
+        if score >= 40.0 and len(criteres_bloquants_ko) <= 1:
+            return StatutMatching.A_VERIFIER.value
+        return StatutMatching.NON_RETENUE.value
     
     def _evaluer_localisation(
         self, 
