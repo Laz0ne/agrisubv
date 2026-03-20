@@ -222,6 +222,8 @@ agrisubv/
 │   ├── explore_aides_endpoint.py    # Endpoint d'exploration
 │   ├── export_aides_endpoint.py     # Endpoint d'export
 │   ├── analyze_criteria_endpoint.py # Endpoint d'analyse des critères
+│   ├── tests/                       # Tests automatisés
+│   │   └── test_questionnaire_engine.py
 │   ├── requirements.txt             # Dépendances Python
 │   ├── Procfile                     # Commande de démarrage Render
 │   ├── runtime.txt                  # Version Python (3.11)
