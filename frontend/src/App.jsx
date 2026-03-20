@@ -7,6 +7,7 @@ import DynamicQuestionnaire from './components/DynamicQuestionnaire';
 import ResultsPage from './components/ResultsPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import NotFoundPage from './components/NotFoundPage';
+import AdminDashboard from './components/AdminDashboard';
 import {
   ClipboardIcon,
   SearchIcon,
@@ -288,6 +289,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/questionnaire" element={<QuestionnairePage />} />
             <Route path="/resultats" element={<ResultsRoute />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
