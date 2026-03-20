@@ -7,6 +7,22 @@ export default function ResultsPage({ results, profil, onRestart }) {
   const [filter, setFilter] = useState('all');
   const [visible, setVisible] = useState(false);
 
+  function handleExport() {
+    const date = new Date().toISOString().slice(0, 10);
+    const payload = {
+      metadata: { date, version: '1.0', application: 'AgriSubv' },
+      profil: profil || {},
+      resultats: results,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agrisubv-resultats-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
     return () => clearTimeout(t);
@@ -124,8 +140,8 @@ export default function ResultsPage({ results, profil, onRestart }) {
         </div>
       )}
 
-      {/* ── Restart Button ────────────────────────────────────── */}
-      <div className="text-center mt-10">
+      {/* ── Action Buttons ────────────────────────────────────── */}
+      <div className="flex justify-center gap-3 mt-10 flex-wrap">
         <button
           onClick={onRestart}
           className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium transition-all duration-200"
@@ -134,6 +150,12 @@ export default function ResultsPage({ results, profil, onRestart }) {
             <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
           </svg>
           Refaire le questionnaire
+        </button>
+        <button
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 px-6 py-3 btn btn-secondary rounded-xl font-medium transition-all duration-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+        >
+          📥 Exporter les résultats
         </button>
       </div>
     </div>
