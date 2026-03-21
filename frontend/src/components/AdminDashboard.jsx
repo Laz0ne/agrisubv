@@ -250,9 +250,9 @@ function Dashboard() {
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <StatCard label="Total aides" value={stats?.total} icon="📋" color="from-green-500 to-emerald-500" />
-                <StatCard label="Aides actives" value={stats?.actives} icon="✅" color="from-blue-500 to-cyan-500" />
-                <StatCard label="Aides expirées" value={stats?.expirees} icon="⏰" color="from-amber-500 to-orange-500" />
+                <StatCard label="Total aides" value={stats?.total_aides} icon="📋" color="from-green-500 to-emerald-500" />
+                <StatCard label="Aides actives" value={stats?.aides_actives} icon="✅" color="from-blue-500 to-cyan-500" />
+                <StatCard label="Aides expirées" value={stats?.aides_expirees} icon="⏰" color="from-amber-500 to-orange-500" />
               </div>
 
               {stats?.par_source && Object.keys(stats.par_source).length > 0 && (
@@ -260,7 +260,7 @@ function Dashboard() {
                   <p className="text-sm font-semibold text-gray-700 mb-2">Répartition par source</p>
                   <div className="space-y-2">
                     {Object.entries(stats.par_source).map(([source, count]) => {
-                      const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+                      const pct = stats.total_aides ? Math.round((count / stats.total_aides) * 100) : 0;
                       return (
                         <div key={source} className="flex items-center gap-3">
                           <span className="text-xs text-gray-600 w-40 truncate">{source}</span>
@@ -278,11 +278,11 @@ function Dashboard() {
                 </div>
               )}
 
-              {stats?.par_region && stats.par_region.length > 0 && (
+              {stats?.par_region && Object.keys(stats.par_region).length > 0 && (
                 <div>
                   <p className="text-sm font-semibold text-gray-700 mb-2">Top régions</p>
                   <div className="flex flex-wrap gap-2">
-                    {stats.par_region.slice(0, 10).map(({ region, count }) => (
+                    {Object.entries(stats.par_region).slice(0, 10).map(([region, count]) => (
                       <span key={region} className="px-2 py-1 bg-green-50 text-green-800 text-xs rounded-full font-medium">
                         {region} ({count})
                       </span>
@@ -322,9 +322,9 @@ function Dashboard() {
               <p className="font-semibold text-gray-700 mb-2">Statut migration</p>
               <div className="grid grid-cols-2 gap-2 text-gray-600">
                 <span>Aides V2 total :</span>
-                <span className="font-medium">{migrationStatus.aides_v2_total ?? '—'}</span>
+                <span className="font-medium">{migrationStatus?.aides_v2_collection?.total ?? '—'}</span>
                 <span>Aides actives V2 :</span>
-                <span className="font-medium">{migrationStatus.aides_v2_actives ?? '—'}</span>
+                <span className="font-medium">{migrationStatus?.aides_v2_collection?.active ?? '—'}</span>
                 {migrationStatus.status && (
                   <>
                     <span>Statut :</span>
