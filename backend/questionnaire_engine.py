@@ -267,7 +267,7 @@ class QuestionnaireEngine:
         aids_docs = await db.aides_v2.find({"statut": "active"}).to_list(length=None)
         aids = [AideAgricoleV2(**doc) for doc in aids_docs]
 
-        resultats = self._matching_engine.find_best_matches(aids, profil, top_n=20)
+        resultats = self._matching_engine.find_best_matches(aids, profil, top_n=200)
 
         classified: Dict[str, list] = {
             StatutMatching.TRES_PROBABLE.value: [],
@@ -500,6 +500,9 @@ class QuestionnaireEngine:
         seen: set = set()
         options: List[dict] = []
 
+        # Reference set for filtering coded values (regions & departements)
+        valid_reference: set = set(self._FALLBACK_OPTIONS.get(criterion_id, []))
+
         # Extraire les options réelles depuis les aides en base
         for aide in aids:
             values = self._get_criterion_values(aide.criteres, criterion_id)
@@ -507,9 +510,13 @@ class QuestionnaireEngine:
                 continue
             for v in values:
                 sv = str(v).strip()
-                if sv and sv not in seen:
-                    seen.add(sv)
-                    options.append({"value": sv, "label": sv})
+                if not sv or sv in seen:
+                    continue
+                # For region/departement, skip coded DB values not in the reference list
+                if criterion_id in ("region", "departement") and valid_reference and sv not in valid_reference:
+                    continue
+                seen.add(sv)
+                options.append({"value": sv, "label": sv})
 
         # Fusionner avec les valeurs de référence (fallback)
         fallback_values = self._FALLBACK_OPTIONS.get(criterion_id, [])

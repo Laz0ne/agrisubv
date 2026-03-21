@@ -329,7 +329,9 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
               Description
             </h4>
             <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
-              {aide.description || 'Aucune description disponible pour cette aide.'}
+              {aide.description
+                || resultat.resume
+                || (aide.conditions_eligibilite ? "Voir les conditions d'éligibilité ci-dessous." : 'Aucune description disponible pour cette aide.')}
             </p>
           </div>
 

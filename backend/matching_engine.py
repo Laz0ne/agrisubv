@@ -752,7 +752,14 @@ class MatchingEngine:
         
         # Si aucune recommandation spécifique
         if not recommandations and not criteres_bloquants_ko:
-            recommandations.append("Votre profil est bien adapté à cette aide, n'hésitez pas à candidater")
+            if aide.source_url or aide.lien_officiel:
+                recommandations.append("Consultez la fiche officielle pour déposer votre dossier")
+            if aide.date_limite_depot:
+                recommandations.append(f"Date limite de dépôt : {aide.date_limite_depot}")
+            if aide.demarche:
+                recommandations.append("Des informations sur les démarches sont disponibles pour cette aide")
+            if not recommandations:
+                recommandations.append("Votre profil est bien adapté à cette aide, n'hésitez pas à candidater")
         
         return recommandations[:5]  # Limiter à 5 recommandations
     
