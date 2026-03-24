@@ -30,14 +30,17 @@ export default function ResultsPage({ results, profil, onRestart }) {
 
   if (!results) return null;
 
-  const aidesEligibles = results.resultats?.filter(r => r.eligible) || [];
-  const aidesQuasiEligibles = results.resultats?.filter(r => !r.eligible && r.score >= 40) || [];
+  const aidesTresProbable = results.resultats?.filter(r => r.statut_matching === 'tres_probable') || [];
+  const aidesProbable = results.resultats?.filter(r => r.statut_matching === 'probable') || [];
+  const aidesAVerifier = results.resultats?.filter(r => r.statut_matching === 'a_verifier') || [];
+  const aidesNonRetenue = results.resultats?.filter(r => r.statut_matching === 'non_retenue') || [];
 
-  const displayedAides = filter === 'eligible'
-    ? aidesEligibles
-    : filter === 'quasi'
-      ? aidesQuasiEligibles
-      : [...aidesEligibles, ...aidesQuasiEligibles];
+  const displayedAides =
+    filter === 'tres_probable' ? aidesTresProbable
+    : filter === 'probable'    ? aidesProbable
+    : filter === 'a_verifier'  ? aidesAVerifier
+    : filter === 'non_retenue' ? aidesNonRetenue
+    : [...aidesTresProbable, ...aidesProbable, ...aidesAVerifier];
 
   return (
     <div className={`max-w-6xl mx-auto px-4 py-8 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
@@ -65,17 +68,17 @@ export default function ResultsPage({ results, profil, onRestart }) {
                 icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>}
               />
               <StatCard
-                value={results.aides_eligibles || 0}
+                value={aidesTresProbable.length + aidesProbable.length}
                 label="Éligibles"
                 highlight="green"
-                onClick={() => setFilter('eligible')}
+                onClick={() => setFilter('tres_probable')}
                 icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
               />
               <StatCard
-                value={results.aides_quasi_eligibles || 0}
-                label="Presque éligibles"
+                value={aidesAVerifier.length}
+                label="À vérifier"
                 highlight="yellow"
-                onClick={() => setFilter('quasi')}
+                onClick={() => setFilter('a_verifier')}
                 icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
               />
               <StatCard
@@ -93,9 +96,11 @@ export default function ResultsPage({ results, profil, onRestart }) {
       {/* ── Filter Tabs ───────────────────────────────────────── */}
       <div className="flex gap-2 mb-6 flex-wrap" role="group" aria-label="Filtrer les aides">
         {[
-          { key: 'all',      label: `Toutes (${aidesEligibles.length + aidesQuasiEligibles.length})`, color: 'gray' },
-          { key: 'eligible', label: `✓ Éligibles (${aidesEligibles.length})`,                         color: 'green' },
-          { key: 'quasi',    label: `⚠ Presque (${aidesQuasiEligibles.length})`,                      color: 'yellow' },
+          { key: 'all',          label: `Actives (${aidesTresProbable.length + aidesProbable.length + aidesAVerifier.length})`, color: 'gray' },
+          { key: 'tres_probable', label: `🟢 Très probable (${aidesTresProbable.length})`,  color: 'green' },
+          { key: 'probable',      label: `🔵 Probable (${aidesProbable.length})`,            color: 'blue' },
+          { key: 'a_verifier',    label: `🟡 À vérifier (${aidesAVerifier.length})`,         color: 'yellow' },
+          { key: 'non_retenue',   label: `⚫ Non retenue (${aidesNonRetenue.length})`,       color: 'gray-dark' },
         ].map(({ key, label, color }) => (
           <button
             key={key}
@@ -103,9 +108,11 @@ export default function ResultsPage({ results, profil, onRestart }) {
             aria-pressed={filter === key}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               filter === key
-                ? color === 'green'  ? 'bg-green-600 text-white shadow-md shadow-green-500/25'
-                : color === 'yellow' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25'
-                                     : 'bg-gray-700 text-white shadow-md'
+                ? color === 'green'     ? 'bg-green-600 text-white shadow-md shadow-green-500/25'
+                : color === 'blue'      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                : color === 'yellow'    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25'
+                : color === 'gray-dark' ? 'bg-gray-500 text-white shadow-md'
+                                        : 'bg-gray-700 text-white shadow-md'
                 : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             }`}
           >
@@ -159,6 +166,22 @@ export default function ResultsPage({ results, profil, onRestart }) {
         </button>
       </div>
     </div>
+  );
+}
+
+// Statut matching badge
+function StatutMatchingBadge({ statut }) {
+  const config = {
+    tres_probable: { label: 'Très probable', className: 'bg-green-100 text-green-800 border border-green-200' },
+    probable:      { label: 'Probable',       className: 'bg-blue-100 text-blue-800 border border-blue-200' },
+    a_verifier:    { label: 'À vérifier',     className: 'bg-amber-100 text-amber-800 border border-amber-200' },
+    non_retenue:   { label: 'Non retenue',    className: 'bg-gray-100 text-gray-600 border border-gray-200' },
+  };
+  const { label, className } = config[statut] || config.non_retenue;
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${className}`}>
+      {label}
+    </span>
   );
 }
 
@@ -261,6 +284,9 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
 
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <ScoreIndicator score={resultat.score || 0} size={64} eligible={isEligible} />
+            {resultat.statut_matching && (
+              <StatutMatchingBadge statut={resultat.statut_matching} />
+            )}
             <svg
               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
               className={`text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
