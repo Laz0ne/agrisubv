@@ -586,6 +586,10 @@ class AidesTerritoiresSync:
         if isinstance(aid_types, list):
             tags.extend([str(a) for a in aid_types if a])
         
+        # Public cible (targeted_audiences)
+        targeted_audiences_raw = aide_data.get('targeted_audiences', [])
+        targeted_audiences = [str(a) for a in targeted_audiences_raw if a] if isinstance(targeted_audiences_raw, list) else []
+        
         # Construction de l'aide V2
         aide_v2 = AideAgricoleV2(
             aid_id=aid_id,
@@ -607,6 +611,7 @@ class AidesTerritoiresSync:
             lien_officiel=url,
             confiance=0.8,
             tags=tags,
+            targeted_audiences=targeted_audiences,
             raw_data=aide_data
         )
         

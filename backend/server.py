@@ -536,6 +536,9 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
                     
                     # Statut
                     'statut': aide.statut,
+                    
+                    # Public cible
+                    'targeted_audiences': getattr(aide, 'targeted_audiences', []) or [],
                 }
                 
                 resultats.append(resultat_dict)
