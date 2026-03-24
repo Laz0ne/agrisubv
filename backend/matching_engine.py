@@ -54,6 +54,14 @@ class MatchingEngine:
         score_total = 0.0
         criteres_bloquants_ko: List[str] = []
         
+        # 0. Vérification du public cible (targeted_audiences)
+        score_public, detail_public, bloquant_public = self._evaluer_public_cible(aide, profil)
+        details_criteres.extend(detail_public)
+        if bloquant_public:
+            criteres_bloquants_ko.append("Public cible")
+        else:
+            score_total += score_public
+        
         # 1. Critères géographiques (25 points)
         score_geo, detail_geo, bloquant_geo = self._evaluer_localisation(aide, profil)
         details_criteres.extend(detail_geo)
@@ -169,6 +177,50 @@ class MatchingEngine:
             return StatutMatching.A_VERIFIER.value
         return StatutMatching.NON_RETENUE.value
     
+    def _evaluer_public_cible(
+        self,
+        aide: AideAgricoleV2,
+        profil: ProfilAgriculteur
+    ) -> Tuple[float, List[DetailCritere], bool]:
+        """Évalue si l'aide est destinée aux agriculteurs via targeted_audiences"""
+        details = []
+        
+        targeted = getattr(aide, 'targeted_audiences', []) or []
+        
+        # Si pas de restriction de public → tous les profils acceptés
+        if not targeted:
+            return 0.0, details, False
+        
+        # Audiences considérées comme agricoles (selon API Aides-Territoires)
+        # "farmer" = exploitants agricoles, "private_person" = particuliers (inclut auto-entrepreneurs),
+        # "association" = structures collectives pouvant être agricoles
+        AGRICULTURAL_AUDIENCES = {"farmer", "private_person", "association"}
+        
+        # Vérifier si l'aide cible des agriculteurs
+        targeted_set = {str(a).lower() for a in targeted}
+        is_for_farmers = bool(targeted_set & AGRICULTURAL_AUDIENCES)
+        
+        # Si uniquement pour collectivités/organismes publics → bloquant pour exploitations agricoles
+        # "commune", "epci", "department", "region" = collectivités territoriales
+        # "public_org" = organismes publics, "public_cpe" = établissements publics,
+        # "special" = publics spéciaux (universités, hôpitaux, etc.)
+        NON_FARMER_ONLY = {"commune", "epci", "department", "region", "public_org", "public_cpe", "special"}
+        is_only_non_farmer = targeted_set and not is_for_farmers and bool(targeted_set & NON_FARMER_ONLY)
+        
+        if is_only_non_farmer:
+            public_label = ', '.join(sorted(targeted_set & NON_FARMER_ONLY))
+            details.append(DetailCritere(
+                nom="Public cible",
+                valide=False,
+                bloquant=True,
+                points=0.0,
+                points_max=0.0,
+                explication=f"❌ Cette aide est réservée aux collectivités/organismes ({public_label}), pas aux exploitations agricoles"
+            ))
+            return 0.0, details, True
+        
+        return 0.0, details, False
+    
     def _evaluer_localisation(
         self, 
         aide: AideAgricoleV2, 
@@ -182,16 +234,8 @@ class MatchingEngine:
         regions = aide.criteres.regions
         departements = aide.criteres.departements
         
-        # Si pas de restriction géographique, points automatiques
+        # Si pas de restriction géographique, points automatiques sans ajouter de détail
         if not regions and not departements:
-            details.append(DetailCritere(
-                nom="Localisation",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_LOCALISATION,
-                points_max=self.POIDS_LOCALISATION,
-                explication="✅ Aucune restriction géographique"
-            ))
             return self.POIDS_LOCALISATION, details, False
         
         # Vérification région
@@ -273,16 +317,8 @@ class MatchingEngine:
         
         types_prod = aide.criteres.types_production
         
-        # Si pas de restriction de production → tous types acceptés
+        # Si pas de restriction de production → tous types acceptés, points automatiques sans détail
         if not types_prod:
-            details.append(DetailCritere(
-                nom="Type de production",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_PRODUCTION,
-                points_max=self.POIDS_PRODUCTION,
-                explication="✅ Tous types de production acceptés"
-            ))
             return self.POIDS_PRODUCTION, details, False
         
         # Si le profil n'a pas de productions renseignées → ne pas bloquer mais donner 0 points
@@ -336,16 +372,8 @@ class MatchingEngine:
         
         types_projet = aide.criteres.types_projets
         
-        # Si pas de restriction de projet
+        # Si pas de restriction de projet, points automatiques sans détail
         if not types_projet:
-            details.append(DetailCritere(
-                nom="Type de projet",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_PROJET,
-                points_max=self.POIDS_PROJET,
-                explication="✅ Tous types de projets acceptés"
-            ))
             return self.POIDS_PROJET, details
         
         # Vérification correspondance
@@ -386,16 +414,8 @@ class MatchingEngine:
         
         statuts_acceptes = aide.criteres.statuts_juridiques
         
-        # Si pas de restriction
+        # Si pas de restriction de statut, points automatiques sans détail
         if not statuts_acceptes:
-            details.append(DetailCritere(
-                nom="Statut juridique",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_STATUT,
-                points_max=self.POIDS_STATUT,
-                explication="✅ Tous statuts juridiques acceptés"
-            ))
             return self.POIDS_STATUT, details, False
         
         # Vérification
@@ -437,16 +457,8 @@ class MatchingEngine:
         age_max = aide.criteres.age_max
         jeune_requis = aide.criteres.jeune_agriculteur
         
-        # Si pas de restriction d'âge
+        # Si pas de restriction d'âge, points automatiques sans détail
         if age_min is None and age_max is None and jeune_requis is None:
-            details.append(DetailCritere(
-                nom="Âge",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_AGE,
-                points_max=self.POIDS_AGE,
-                explication="✅ Aucune restriction d'âge"
-            ))
             return self.POIDS_AGE, details, False
         
         # Si l'âge n'est pas renseigné dans le profil
@@ -539,16 +551,8 @@ class MatchingEngine:
         surf_min = aide.criteres.superficie_min
         surf_max = aide.criteres.superficie_max
         
-        # Si pas de restriction
+        # Si pas de restriction, points automatiques sans détail
         if surf_min is None and surf_max is None:
-            details.append(DetailCritere(
-                nom="Surface",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_SURFACE,
-                points_max=self.POIDS_SURFACE,
-                explication="✅ Aucune restriction de surface"
-            ))
             return self.POIDS_SURFACE, details, False
         
         surface_ok = True
@@ -636,15 +640,7 @@ class MatchingEngine:
                     explication=f"❌ Label(s) manquant(s): {', '.join(labels_manquants)}. Cette aide nécessite: {', '.join(labels_requis)}"
                 ))
         else:
-            # Pas de labels requis, points automatiques
-            details.append(DetailCritere(
-                nom="Labels requis",
-                valide=True,
-                bloquant=False,
-                points=self.POIDS_LABELS * 0.6,
-                points_max=self.POIDS_LABELS * 0.6,
-                explication="✅ Aucun label spécifique requis"
-            ))
+            # Pas de labels requis, points automatiques sans détail
             score += self.POIDS_LABELS * 0.6
         
         # Labels bonus

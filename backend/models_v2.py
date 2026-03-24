@@ -174,6 +174,7 @@ class AideAgricoleV2(BaseModel):
     confiance: float = 1.0
     tags: List[str] = Field(default_factory=list)
     conditions: List[ConditionAide] = Field(default_factory=list)
+    targeted_audiences: List[str] = Field(default_factory=list)
     
     raw_data: Optional[Dict[str, Any]] = None
 

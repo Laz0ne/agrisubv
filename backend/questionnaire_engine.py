@@ -267,7 +267,59 @@ class QuestionnaireEngine:
         aids_docs = await db.aides_v2.find({"statut": "active"}).to_list(length=None)
         aids = [AideAgricoleV2(**doc) for doc in aids_docs]
 
+        # Build a map for quick lookup
+        aids_by_id = {aide.aid_id: aide for aide in aids}
+
         resultats = self._matching_engine.find_best_matches(aids, profil, top_n=200)
+
+        # Enrich each result with the full aide data (mirrors server.py behaviour)
+        resultats_enrichis = []
+        for r in resultats:
+            r_dict = r.model_dump()
+            aide = aids_by_id.get(r.aide_id)
+            if aide:
+                r_dict['aide'] = {
+                    'aid_id': aide.aid_id,
+                    'titre': aide.titre,
+                    'description': aide.description if aide.description else '',
+                    'description_courte': (
+                        aide.description[:200] + '...'
+                        if aide.description and len(aide.description) > 200
+                        else aide.description
+                    ),
+                    'organisme': aide.organisme,
+                    'programme': aide.programme,
+                    'source': aide.source,
+                    'source_url': aide.source_url,
+                    'lien_officiel': aide.lien_officiel,
+                    'lien_dossier': aide.lien_dossier,
+                    'date_debut': aide.date_debut,
+                    'date_fin': aide.date_fin,
+                    'date_limite_depot': aide.date_limite_depot,
+                    'montant': {
+                        'type': aide.montant.type_montant.value if aide.montant and aide.montant.type_montant else None,
+                        'min': aide.montant.montant_min if aide.montant else None,
+                        'max': aide.montant.montant_max if aide.montant else None,
+                        'taux_min': aide.montant.taux_min if aide.montant else None,
+                        'taux_max': aide.montant.taux_max if aide.montant else None,
+                        'plafond': aide.montant.plafond if aide.montant else None,
+                        'description': aide.montant.description if aide.montant else None,
+                    },
+                    'criteres': {
+                        'regions': aide.criteres.regions if aide.criteres else [],
+                        'departements': aide.criteres.departements if aide.criteres else [],
+                        'types_production': [p.value for p in aide.criteres.types_production] if aide.criteres and aide.criteres.types_production else [],
+                        'types_projets': [p.value for p in aide.criteres.types_projets] if aide.criteres and aide.criteres.types_projets else [],
+                        'labels_requis': aide.criteres.labels_requis if aide.criteres else [],
+                        'jeune_agriculteur': aide.criteres.jeune_agriculteur if aide.criteres else None,
+                    },
+                    'conditions_eligibilite': aide.conditions_eligibilite if aide.conditions_eligibilite else '',
+                    'demarche': aide.demarche if aide.demarche else '',
+                    'contact': aide.contact,
+                    'tags': aide.tags[:15] if aide.tags else [],
+                    'statut': aide.statut,
+                }
+            resultats_enrichis.append(r_dict)
 
         classified: Dict[str, list] = {
             StatutMatching.TRES_PROBABLE.value: [],
@@ -282,7 +334,7 @@ class QuestionnaireEngine:
 
         return {
             "profil": profil.model_dump(),
-            "resultats": [r.model_dump() for r in resultats],
+            "resultats": resultats_enrichis,
             "classified": classified,
             "stats": {
                 "total_evaluated": len(aids),

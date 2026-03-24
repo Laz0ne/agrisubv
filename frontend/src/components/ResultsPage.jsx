@@ -328,11 +328,18 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
               </svg>
               Description
             </h4>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
-              {aide.description
-                || resultat.resume
-                || (aide.conditions_eligibilite ? "Voir les conditions d'éligibilité ci-dessous." : 'Aucune description disponible pour cette aide.')}
-            </p>
+            {(aide.description || resultat.resume) ? (
+              <div
+                className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(aide.description || resultat.resume || '')
+                }}
+              />
+            ) : aide.conditions_eligibilite ? (
+              <p className="text-gray-700 leading-relaxed text-sm italic">Voir les conditions d'éligibilité ci-dessous.</p>
+            ) : (
+              <p className="text-gray-700 leading-relaxed text-sm italic">Aucune description disponible pour cette aide.</p>
+            )}
           </div>
 
           {aide.conditions_eligibilite && (
@@ -400,7 +407,10 @@ function AideFlashcard({ resultat, index, isExpanded, onToggle }) {
                 </svg>
                 Démarches
               </h4>
-              <p className="text-gray-700 leading-relaxed text-sm">{aide.demarche}</p>
+              <div
+                className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(aide.demarche) }}
+              />
             </div>
           )}
 
