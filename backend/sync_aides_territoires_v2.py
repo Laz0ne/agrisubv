@@ -210,6 +210,7 @@ class AidesTerritoiresSync:
                     
                     params = {
                         'is_charged': 'false',
+                        'is_live': 'true',
                         'page_size': self.BATCH_SIZE,
                         'page': page
                     }
@@ -539,7 +540,11 @@ class AidesTerritoiresSync:
         
         # Statut
         statut = 'active'
-        if date_limite:
+        # Permanent aids (Permanente recurrence) with no deadline always stay active
+        is_permanent = isinstance(recurrence, str) and recurrence.strip().lower() == 'permanente'
+        if is_permanent and not date_limite:
+            statut = 'active'
+        elif date_limite:
             try:
                 deadline = datetime.fromisoformat(date_limite.replace('Z', '+00:00'))
                 if deadline < datetime.now(timezone.utc):
