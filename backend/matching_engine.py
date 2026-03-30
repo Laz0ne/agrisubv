@@ -4,6 +4,7 @@ Calcule le score de compatibilité entre un profil agriculteur et une aide
 """
 
 from typing import List, Optional, Tuple
+from datetime import datetime, timezone
 from models_v2 import (
     AideAgricoleV2, ProfilAgriculteur, ResultatMatching, 
     DetailCritere, TypeProduction, TypeProjet, StatutMatching
@@ -30,6 +31,22 @@ class MatchingEngine:
     
     # Seuil d'éligibilité (score minimum)
     SEUIL_ELIGIBILITE = 60.0
+
+    # Tags indiquant qu'une aide est hors secteur agricole
+    NON_AGRICULTURAL_TAGS = {
+        'sport', 'sports', 'culture', 'patrimoine', 'tourisme',
+        'loisirs', 'spectacle', 'musique', 'théâtre', 'cinéma',
+        'santé', 'médical', 'social', 'urbanisme', 'transport',
+        'numérique', 'industrie', 'commerce', 'artisanat',
+    }
+
+    # Tags indiquant qu'une aide est agricole
+    AGRICULTURAL_TAGS = {
+        'agriculture', 'agricole', 'rural', 'exploitation', 'élevage',
+        'bio', 'irrigation', 'foncier', 'pac', 'maec', 'pcae',
+        'développement-rural', 'nature-environnement', 'eau-assainissement',
+        'energie', 'formation-emploi',
+    }
     
     def __init__(self):
         """Initialise le moteur de matching"""
@@ -53,7 +70,24 @@ class MatchingEngine:
         details_criteres: List[DetailCritere] = []
         score_total = 0.0
         criteres_bloquants_ko: List[str] = []
-        
+
+        # 0.bis Vérification date limite de dépôt
+        if aide.date_limite_depot:
+            try:
+                deadline = datetime.fromisoformat(str(aide.date_limite_depot).replace('Z', '+00:00'))
+                if deadline < datetime.now(timezone.utc):
+                    details_criteres.append(DetailCritere(
+                        nom="Date limite",
+                        valide=False,
+                        bloquant=True,
+                        points=0.0,
+                        points_max=0.0,
+                        explication=f"❌ Date limite de dépôt dépassée ({aide.date_limite_depot})"
+                    ))
+                    criteres_bloquants_ko.append("Date limite dépassée")
+            except (ValueError, TypeError):
+                pass
+
         # 0. Vérification du public cible (targeted_audiences)
         score_public, detail_public, bloquant_public = self._evaluer_public_cible(aide, profil)
         details_criteres.extend(detail_public)
@@ -187,8 +221,25 @@ class MatchingEngine:
         
         targeted = getattr(aide, 'targeted_audiences', []) or []
         
-        # Si pas de restriction de public → tous les profils acceptés
+        # Si pas de restriction de public → vérifier les tags pour détecter les aides non-agricoles
         if not targeted:
+            tags = getattr(aide, 'tags', []) or []
+            tags_lower = {str(t).lower() for t in tags}
+
+            has_non_agri = bool(tags_lower & self.NON_AGRICULTURAL_TAGS)
+            has_agri = bool(tags_lower & self.AGRICULTURAL_TAGS)
+
+            if has_non_agri and not has_agri:
+                details.append(DetailCritere(
+                    nom="Public cible",
+                    valide=False,
+                    bloquant=True,
+                    points=0.0,
+                    points_max=0.0,
+                    explication="❌ Cette aide ne concerne pas le secteur agricole"
+                ))
+                return 0.0, details, True
+
             return 0.0, details, False
         
         # Audiences considérées comme agricoles (selon API Aides-Territoires)

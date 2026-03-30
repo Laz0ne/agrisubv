@@ -170,21 +170,21 @@ class AidesTerritoiresSync:
         
         # Catégories et mots-clés pour récupérer toutes les aides agricoles
         search_configs = [
-            {'categories': 'agriculture'},
-            {'categories': 'nature-environnement', 'text': 'agricole'},
-            {'categories': 'nature-environnement', 'text': 'exploitation'},
-            {'categories': 'developpement-rural'},
-            {'categories': 'eau-assainissement', 'text': 'irrigation'},
-            {'categories': 'eau-assainissement', 'text': 'agricole'},
-            {'categories': 'energie', 'text': 'agricole'},
-            {'categories': 'energie', 'text': 'méthanisation'},
-            {'categories': 'formation-emploi', 'text': 'agriculteur'},
-            {'text': 'exploitation agricole'},
-            {'text': 'jeune agriculteur'},
-            {'text': 'installation agricole'},
-            {'text': 'PAC'},
-            {'text': 'PCAE'},
-            {'text': 'MAEC'},
+            {'categories': 'agriculture'},  # Catégorie principale → pas besoin de filtre farmer
+            {'categories': 'nature-environnement', 'text': 'agricole', 'targeted_audiences': 'farmer'},
+            {'categories': 'nature-environnement', 'text': 'exploitation', 'targeted_audiences': 'farmer'},
+            {'categories': 'developpement-rural', 'targeted_audiences': 'farmer'},
+            {'categories': 'eau-assainissement', 'text': 'irrigation', 'targeted_audiences': 'farmer'},
+            {'categories': 'eau-assainissement', 'text': 'agricole', 'targeted_audiences': 'farmer'},
+            {'categories': 'energie', 'text': 'agricole', 'targeted_audiences': 'farmer'},
+            {'categories': 'energie', 'text': 'méthanisation', 'targeted_audiences': 'farmer'},
+            {'categories': 'formation-emploi', 'text': 'agriculteur', 'targeted_audiences': 'farmer'},
+            {'text': 'exploitation agricole', 'targeted_audiences': 'farmer'},
+            {'text': 'jeune agriculteur', 'targeted_audiences': 'farmer'},
+            {'text': 'installation agricole', 'targeted_audiences': 'farmer'},
+            {'text': 'PAC', 'targeted_audiences': 'farmer'},
+            {'text': 'PCAE', 'targeted_audiences': 'farmer'},
+            {'text': 'MAEC', 'targeted_audiences': 'farmer'},
         ]
         
         headers = {
@@ -260,6 +260,38 @@ class AidesTerritoiresSync:
         logger.info(f"✅ Total récupéré: {len(all_aides)} aides uniques")
         return all_aides
     
+    AGRICULTURAL_KEYWORDS = {
+        'agriculture', 'agricole', 'exploitation', 'élevage', 'récolte',
+        'ferme', 'pac', 'maec', 'pcae', 'bio', 'irrigation', 'rural',
+        'foncier', 'installation', 'jeune agriculteur', 'vigne', 'bovin',
+        'ovin', 'caprin', 'porcin', 'avicole', 'laitier', 'céréale',
+        'maraîchage', 'arboriculture', 'horticulture', 'apiculture', 'aquaculture',
+        'agroécologie', 'agroforesterie', 'méthanisation', 'biomasse',
+        'phytosanitaire', 'semence', 'fourrage', 'prairie', 'pâturage',
+        'tracteur', 'bâtiment agricole', 'silo', 'stabulation', 'éleveur',
+        'paysan', 'cultivateur', 'viticole', 'viticulture', 'sylviculture',
+    }
+
+    def is_agricultural_aide(self, aide_data: Dict[str, Any]) -> bool:
+        """Vérifie si l'aide est réellement destinée au monde agricole"""
+        # Vérifier targeted_audiences
+        targeted = aide_data.get('targeted_audiences', [])
+        if targeted and isinstance(targeted, list):
+            targeted_set = {str(a).lower() for a in targeted}
+            if 'farmer' in targeted_set:
+                return True
+
+        # Vérifier les mots-clés dans titre, description, catégories, éligibilité
+        name = str(aide_data.get('name', '') or '').lower()
+        desc = str(aide_data.get('description', '') or '').lower()
+        categories_raw = aide_data.get('categories', [])
+        categories = ' '.join([str(c).lower() for c in categories_raw if c]) if isinstance(categories_raw, list) else ''
+        eligibility = str(aide_data.get('eligibility', '') or '').lower()
+
+        all_text = f"{name} {desc} {categories} {eligibility}"
+
+        return any(kw in all_text for kw in self.AGRICULTURAL_KEYWORDS)
+
     def detect_productions(self, aide_data: Dict[str, Any]) -> List[TypeProduction]:
         """
         Détecte les types de production depuis les mots-clés
@@ -685,12 +717,14 @@ class AidesTerritoiresSync:
         # 2. Normalisation
         logger.info(f"\n🔄 Phase 2: Normalisation de {len(aides_brutes)} aides...")
         aides_v2 = []
+        aides_brutes_valides = []  # Track only successfully normalized raw aids
         erreurs_normalisation = 0
         
         for i, aide_brute in enumerate(aides_brutes, 1):
             try:
                 aide_v2 = self.normalize_aide(aide_brute)
                 aides_v2.append(aide_v2)
+                aides_brutes_valides.append(aide_brute)
                 if i % 50 == 0:
                     logger.info(f"   ✅ {i}/{len(aides_brutes)} normalisées")
             except Exception as e:
@@ -709,6 +743,19 @@ class AidesTerritoiresSync:
                 erreurs_normalisation += 1
         
         logger.info(f"   ✅ {len(aides_v2)} aides normalisées")
+
+        # 2bis. Filtrage des aides non-agricoles
+        logger.info(f"\n🌾 Phase 2bis: Filtrage agricole...")
+        aides_v2_filtered = []
+        non_agricultural = 0
+        for aide_brute, aide_v2 in zip(aides_brutes_valides, aides_v2):
+            if self.is_agricultural_aide(aide_brute):
+                aides_v2_filtered.append(aide_v2)
+            else:
+                non_agricultural += 1
+                logger.debug(f"   ⏭️ Aide non-agricole ignorée: {aide_v2.titre[:60]}")
+        aides_v2 = aides_v2_filtered
+        logger.info(f"   🌾 {len(aides_v2)} aides agricoles retenues ({non_agricultural} non-agricoles ignorées)")
         
         # 3. Import par batch
         logger.info(f"\n💾 Phase 3: Import par batch (taille: {self.BATCH_SIZE})...")
