@@ -475,6 +475,25 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
             }
         
         logger.info(f"   📊 {len(aides)} aides V2 trouvées")
+
+        # Double-check expiration: filtrer les aides dont la date a changé depuis la dernière sync
+        now_utc = datetime.now(timezone.utc)
+        aides_valides = []
+        aides_expirees_skip = 0
+        for aide_data in aides:
+            date_limite = aide_data.get('date_limite_depot')
+            if date_limite:
+                try:
+                    deadline = datetime.fromisoformat(str(date_limite).replace('Z', '+00:00'))
+                    if deadline < now_utc:
+                        aides_expirees_skip += 1
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            aides_valides.append(aide_data)
+        if aides_expirees_skip:
+            logger.info(f"   ⏰ {aides_expirees_skip} aides ignorées (date limite dépassée)")
+        aides = aides_valides
         
         # Créer le matching engine
         engine = MatchingEngine()
