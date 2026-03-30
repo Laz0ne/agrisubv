@@ -485,7 +485,21 @@ async def calculate_matching_v2(profil_data: Dict[str, Any]):
             if date_limite:
                 try:
                     deadline = datetime.fromisoformat(str(date_limite).replace('Z', '+00:00'))
+                    if deadline.tzinfo is None:
+                        deadline = deadline.replace(tzinfo=timezone.utc)
                     if deadline < now_utc:
+                        aides_expirees_skip += 1
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            # Also check date_fin: skip aides whose end date has passed
+            date_fin = aide_data.get('date_fin')
+            if date_fin:
+                try:
+                    end_date = datetime.fromisoformat(str(date_fin).replace('Z', '+00:00'))
+                    if end_date.tzinfo is None:
+                        end_date = end_date.replace(tzinfo=timezone.utc)
+                    if end_date < now_utc:
                         aides_expirees_skip += 1
                         continue
                 except (ValueError, TypeError):
