@@ -1,11 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import ScoreIndicator from './ScoreIndicator';
+
+const TYPES_PRODUCTION = [
+  'Céréales', 'Maraîchage', 'Viticulture', 'Arboriculture',
+  'Élevage bovin', 'Élevage ovin', 'Élevage caprin', 'Élevage porcin',
+  'Élevage avicole', 'Élevage laitier', 'Grandes cultures', 'Horticulture',
+  'Apiculture', 'Aquaculture',
+];
+
+const TYPES_PROJETS = [
+  'Installation', 'Conversion bio', 'Modernisation', 'Diversification',
+  'Irrigation', 'Bâtiment', 'Matériel', 'Énergie', 'Environnement',
+  'Formation', 'Commercialisation', 'Numérique', 'Bien-être animal',
+];
 
 export default function ResultsPage({ results, profil, onRestart }) {
   const [expandedAide, setExpandedAide] = useState(null);
   const [filter, setFilter] = useState('all');
   const [visible, setVisible] = useState(false);
+
+  // Advanced filters state
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filterRegion, setFilterRegion] = useState('');
+  const [filterTypeProduction, setFilterTypeProduction] = useState('');
+  const [filterTypeProjet, setFilterTypeProjet] = useState('');
+  const [filterMontantMin, setFilterMontantMin] = useState('');
+  const [filterOrganisme, setFilterOrganisme] = useState('');
+  const [sortBy, setSortBy] = useState('score');
 
   function handleExport() {
     const date = new Date().toISOString().slice(0, 10);
@@ -35,12 +58,133 @@ export default function ResultsPage({ results, profil, onRestart }) {
   const aidesAVerifier = results.resultats?.filter(r => r.statut_matching === 'a_verifier') || [];
   const aidesNonRetenue = results.resultats?.filter(r => r.statut_matching === 'non_retenue') || [];
 
-  const displayedAides =
-    filter === 'tres_probable' ? aidesTresProbable
-    : filter === 'probable'    ? aidesProbable
-    : filter === 'a_verifier'  ? aidesAVerifier
-    : filter === 'non_retenue' ? aidesNonRetenue
-    : [...aidesTresProbable, ...aidesProbable, ...aidesAVerifier];
+  // All resultats after status filter
+  const statusFilteredAides = useMemo(() => {
+    if (filter === 'tres_probable') return aidesTresProbable;
+    if (filter === 'probable')      return aidesProbable;
+    if (filter === 'a_verifier')    return aidesAVerifier;
+    if (filter === 'non_retenue')   return aidesNonRetenue;
+    return [...aidesTresProbable, ...aidesProbable, ...aidesAVerifier];
+  }, [filter, aidesTresProbable, aidesProbable, aidesAVerifier, aidesNonRetenue]);
+
+  // Extract unique regions and organismes from all resultats
+  const uniqueRegions = useMemo(() => {
+    const allResultats = results.resultats || [];
+    const regions = new Set();
+    allResultats.forEach(r => {
+      (r.aide?.criteres?.regions || []).forEach(reg => regions.add(reg));
+    });
+    return Array.from(regions).sort();
+  }, [results.resultats]);
+
+  const uniqueOrganismes = useMemo(() => {
+    const allResultats = results.resultats || [];
+    const organismes = new Set();
+    allResultats.forEach(r => {
+      if (r.aide?.organisme) organismes.add(r.aide.organisme);
+    });
+    return Array.from(organismes).sort();
+  }, [results.resultats]);
+
+  // Apply advanced filters + sort with useMemo
+  const displayedAides = useMemo(() => {
+    let aides = statusFilteredAides;
+
+    // Text search
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      aides = aides.filter(r => {
+        const aide = r.aide || {};
+        return (
+          (aide.titre || '').toLowerCase().includes(q) ||
+          (aide.organisme || '').toLowerCase().includes(q) ||
+          (aide.description || '').toLowerCase().includes(q)
+        );
+      });
+    }
+
+    // Region filter
+    if (filterRegion) {
+      aides = aides.filter(r => {
+        const regions = r.aide?.criteres?.regions || [];
+        return regions.includes(filterRegion);
+      });
+    }
+
+    // Type de production filter
+    if (filterTypeProduction) {
+      aides = aides.filter(r => {
+        const types = r.aide?.criteres?.types_production || [];
+        return types.includes(filterTypeProduction);
+      });
+    }
+
+    // Type de projet filter
+    if (filterTypeProjet) {
+      aides = aides.filter(r => {
+        const types = r.aide?.criteres?.types_projets || [];
+        return types.includes(filterTypeProjet);
+      });
+    }
+
+    // Montant minimum filter
+    if (filterMontantMin !== '') {
+      const minVal = parseFloat(filterMontantMin);
+      if (!isNaN(minVal)) {
+        aides = aides.filter(r => {
+          const montantValue = r.montant_estime_min ?? r.aide?.montant?.montant_max ?? 0;
+          return montantValue >= minVal;
+        });
+      }
+    }
+
+    // Organisme filter
+    if (filterOrganisme) {
+      aides = aides.filter(r => r.aide?.organisme === filterOrganisme);
+    }
+
+    // Sort
+    aides = [...aides];
+    if (sortBy === 'score') {
+      aides.sort((a, b) => (b.score || 0) - (a.score || 0));
+    } else if (sortBy === 'montant') {
+      aides.sort((a, b) => {
+        const aVal = a.montant_estime_min ?? a.aide?.montant?.montant_max ?? 0;
+        const bVal = b.montant_estime_min ?? b.aide?.montant?.montant_max ?? 0;
+        return bVal - aVal;
+      });
+    } else if (sortBy === 'titre') {
+      aides.sort((a, b) => {
+        const aTitle = (a.aide?.titre || '').toLowerCase();
+        const bTitle = (b.aide?.titre || '').toLowerCase();
+        return aTitle.localeCompare(bTitle, 'fr');
+      });
+    }
+
+    return aides;
+  }, [statusFilteredAides, searchText, filterRegion, filterTypeProduction, filterTypeProjet, filterMontantMin, filterOrganisme, sortBy]);
+
+  // Count active advanced filters (excluding sort)
+  const activeFilterCount = [
+    searchText.trim() !== '',
+    filterRegion !== '',
+    filterTypeProduction !== '',
+    filterTypeProjet !== '',
+    filterMontantMin !== '',
+    filterOrganisme !== '',
+  ].filter(Boolean).length;
+
+  function resetFilters() {
+    setSearchText('');
+    setFilterRegion('');
+    setFilterTypeProduction('');
+    setFilterTypeProjet('');
+    setFilterMontantMin('');
+    setFilterOrganisme('');
+    setSortBy('score');
+  }
+
+  const totalStatusFiltered = statusFilteredAides.length;
 
   return (
     <div className={`max-w-6xl mx-auto px-4 py-8 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
@@ -119,6 +263,173 @@ export default function ResultsPage({ results, profil, onRestart }) {
             {label}
           </button>
         ))}
+      </div>
+
+      {/* ── Advanced Filter Toolbar ───────────────────────────── */}
+      <div className="mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setFiltersOpen(prev => !prev)}
+            aria-expanded={filtersOpen}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+              filtersOpen
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/25'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+            }`}
+          >
+            🔧 Filtres avancés
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-emerald-700 text-xs font-bold leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              className={`transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {activeFilterCount > 0 && (
+            <button
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 font-medium transition-all duration-200"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Réinitialiser les filtres
+            </button>
+          )}
+
+          <span className="ml-auto text-sm text-gray-500">
+            <span className="font-semibold text-gray-800">{displayedAides.length}</span> aide{displayedAides.length !== 1 ? 's' : ''} affichée{displayedAides.length !== 1 ? 's' : ''} sur <span className="font-semibold text-gray-800">{totalStatusFiltered}</span>
+          </span>
+        </div>
+
+        {/* Collapsible filter panel */}
+        {filtersOpen && (
+          <div className="mt-3 p-5 bg-white border border-gray-200 rounded-2xl shadow-md animate-fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              {/* Text search */}
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  🔍 Recherche textuelle
+                </label>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={e => setSearchText(e.target.value)}
+                  placeholder="Titre, organisme, description…"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Région */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  📍 Région
+                </label>
+                <select
+                  value={filterRegion}
+                  onChange={e => setFilterRegion(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                >
+                  <option value="">Toutes les régions</option>
+                  {uniqueRegions.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Type de production */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  🌾 Type de production
+                </label>
+                <select
+                  value={filterTypeProduction}
+                  onChange={e => setFilterTypeProduction(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                >
+                  <option value="">Tous les types</option>
+                  {TYPES_PRODUCTION.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Type de projet */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  🎯 Type de projet
+                </label>
+                <select
+                  value={filterTypeProjet}
+                  onChange={e => setFilterTypeProjet(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                >
+                  <option value="">Tous les projets</option>
+                  {TYPES_PROJETS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Organisme */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  🏛️ Organisme
+                </label>
+                <select
+                  value={filterOrganisme}
+                  onChange={e => setFilterOrganisme(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                >
+                  <option value="">Tous les organismes</option>
+                  {uniqueOrganismes.map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Montant minimum */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  💰 Montant minimum (€)
+                </label>
+                <input
+                  type="number"
+                  value={filterMontantMin}
+                  onChange={e => setFilterMontantMin(e.target.value)}
+                  placeholder="Ex: 5000"
+                  min="0"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Tri */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  ↕️ Trier par
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                >
+                  <option value="score">Score (par défaut)</option>
+                  <option value="montant">Montant estimé (décroissant)</option>
+                  <option value="titre">Titre (alphabétique)</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Aide Cards ────────────────────────────────────────── */}
