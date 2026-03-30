@@ -288,7 +288,44 @@ class MatchingEngine:
         # Si pas de restriction géographique, points automatiques sans ajouter de détail
         if not regions and not departements:
             return self.POIDS_LOCALISATION, details, False
-        
+
+        # Cas spécial : restriction uniquement départementale (regions vide, departements non vide)
+        # Évaluer uniquement sur la correspondance du département, sans accorder de points région
+        if not regions and departements:
+            if profil.departement:
+                dept_ok = profil.departement in departements
+                if dept_ok:
+                    details.append(DetailCritere(
+                        nom="Département",
+                        valide=True,
+                        bloquant=True,
+                        points=self.POIDS_LOCALISATION,
+                        points_max=self.POIDS_LOCALISATION,
+                        explication=f"✅ Département {profil.departement} éligible"
+                    ))
+                    return self.POIDS_LOCALISATION, details, False
+                else:
+                    details.append(DetailCritere(
+                        nom="Département",
+                        valide=False,
+                        bloquant=True,
+                        points=0.0,
+                        points_max=self.POIDS_LOCALISATION,
+                        explication=f"❌ Département {profil.departement} non éligible (départements acceptés: {', '.join(departements)})"
+                    ))
+                    return 0.0, details, True
+            else:
+                # Aide limitée à des départements précis mais le profil n'a pas de département renseigné
+                details.append(DetailCritere(
+                    nom="Département",
+                    valide=False,
+                    bloquant=True,
+                    points=0.0,
+                    points_max=self.POIDS_LOCALISATION,
+                    explication=f"❌ Aide limitée aux départements {', '.join(departements)} - département non renseigné dans votre profil"
+                ))
+                return 0.0, details, True
+
         # Vérification région
         region_ok = False
         if regions:
@@ -318,7 +355,7 @@ class MatchingEngine:
                 ))
                 bloquant = True
         
-        # Vérification département
+        # Vérification département (quand des régions sont aussi définies)
         if departements and profil.departement:
             dept_ok = profil.departement in departements
             if dept_ok:

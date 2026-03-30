@@ -397,7 +397,7 @@ class AidesTerritoiresSync:
         elif 'france' in perimeter_name.lower() or 'national' in scale:
             regions.append("National")
         
-        return regions if regions else ["National"], departements
+        return regions if regions else ([] if departements else ["National"]), departements
     
     def extract_montants(self, aide_data: Dict[str, Any]) -> tuple:
         """
@@ -579,7 +579,19 @@ class AidesTerritoiresSync:
         elif date_limite:
             try:
                 deadline = datetime.fromisoformat(date_limite.replace('Z', '+00:00'))
+                if deadline.tzinfo is None:
+                    deadline = deadline.replace(tzinfo=timezone.utc)
                 if deadline < datetime.now(timezone.utc):
+                    statut = 'expiree'
+            except (ValueError, TypeError):
+                pass
+        # Also check date_fin: if the aide end date is in the past, mark as expired
+        if statut == 'active' and date_fin:
+            try:
+                end_date = datetime.fromisoformat(str(date_fin).replace('Z', '+00:00'))
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=timezone.utc)
+                if end_date < datetime.now(timezone.utc):
                     statut = 'expiree'
             except (ValueError, TypeError):
                 pass
